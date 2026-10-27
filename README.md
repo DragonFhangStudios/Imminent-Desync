@@ -1,7 +1,7 @@
 # Imminent Desync
 
 A real-time containment-infrastructure strategy game built around a living Desync simulation.
-DragonFhang Studios (DFS). Private repository.
+DragonFhang Studios (DFS). Public repository; development is managed by the DFS team through reviewed pull requests.
 
 - **Game Director:** Andrew (final decision-maker on design, merges and releases)
 - **Design / architecture collaborator:** DFS Jr.
