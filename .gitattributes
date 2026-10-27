@@ -1,0 +1,114 @@
+# Imminent Desync — Git attributes
+#
+# Line endings: the repository stores text with LF so Windows and Linux
+# (including cloud Claude Code sessions) see identical content.
+# Windows checkouts get the platform default for scripts/docs; Unity YAML stays LF.
+* text=auto
+
+# ---- Scripts, UI, and docs ----
+*.cs            text diff=csharp
+*.asmdef        text
+*.asmref        text
+*.json          text
+*.inputactions  text
+*.uxml          text
+*.uss           text
+*.tss           text
+*.shader        text
+*.hlsl          text
+*.cginc         text
+*.compute       text
+*.shadergraph   text
+*.shadersubgraph text
+*.md            text
+*.txt           text
+
+# ---- Unity YAML (Force Text serialization) — always LF ----
+*.unity             text eol=lf
+*.prefab            text eol=lf
+*.asset             text eol=lf
+*.meta              text eol=lf
+*.mat               text eol=lf
+*.anim              text eol=lf
+*.controller        text eol=lf
+*.overrideController text eol=lf
+*.physicMaterial    text eol=lf
+*.physicsMaterial2D text eol=lf
+*.playable          text eol=lf
+*.mask              text eol=lf
+*.brush             text eol=lf
+*.flare             text eol=lf
+*.fontsettings      text eol=lf
+*.guiskin           text eol=lf
+*.giparams          text eol=lf
+*.renderTexture     text eol=lf
+*.spriteatlas       text eol=lf
+*.spriteatlasv2     text eol=lf
+*.terrainlayer      text eol=lf
+*.mixer             text eol=lf
+*.shadervariants    text eol=lf
+*.preset            text eol=lf
+*.scenetemplate     text eol=lf
+*.lighting          text eol=lf
+*.signal            text eol=lf
+*.cubemap           text eol=lf
+
+# Unity writes these as binary even with Force Text serialization
+LightingData.asset  binary
+*.lightingdata      binary
+
+# ---- Binary assets ----
+# Images
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.bmp   binary
+*.tga   binary
+*.tif   binary
+*.tiff  binary
+*.psd   binary
+*.psb   binary
+*.exr   binary
+*.hdr   binary
+*.ico   binary
+*.webp  binary
+*.aseprite binary
+*.ase   binary
+# Models
+*.fbx   binary
+*.obj   binary
+*.blend binary
+*.dae   binary
+*.3ds   binary
+*.max   binary
+*.ma    binary
+*.mb    binary
+# Audio / video
+*.wav   binary
+*.mp3   binary
+*.ogg   binary
+*.aif   binary
+*.aiff  binary
+*.flac  binary
+*.mp4   binary
+*.mov   binary
+*.webm  binary
+# Fonts
+*.ttf   binary
+*.otf   binary
+# Native / compiled
+*.dll   binary
+*.so    binary
+*.dylib binary
+*.exe   binary
+*.a     binary
+*.bytes binary
+# Archives and documents
+*.zip   binary
+*.7z    binary
+*.rar   binary
+*.pdf   binary
+*.docx  binary
+*.xlsx  binary
+*.pptx  binary

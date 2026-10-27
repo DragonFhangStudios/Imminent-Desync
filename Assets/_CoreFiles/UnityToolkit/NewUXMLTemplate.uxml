@@ -1,0 +1,32 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="GameHUD" style="flex-grow: 1; right: auto; left: auto; max-height: 143px;">
+        <ui:Label text="Reality Integrity: 999%" name="IntegrityLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Brush Radius: 99" name="BrushRadiusLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Containment Status: Null" name="ContainmentStatusLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+    </ui:VisualElement>
+    <ui:VisualElement name="DebugHUD" style="flex-grow: 1; right: auto; left: auto; align-items: stretch; max-height: 768px;">
+        <ui:Label text="Anonmaly Count: 9999" name="AnomalyCountLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Containment Node: Null" name="ContainmentNodeLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Total Desync Status: Null" name="TotalDesyncLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Peak Desync Status: Null" name="PeakDesyncLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Total Stabilization: 999%" name="TotalStabilizationLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Pressure Ratio: Null" name="PressureRatioLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Active Nodes: 999" name="ActiveNodesLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Active Stabilization: 999" name="ActiveStabilizationLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Net Delta: 999" name="NetDeltaLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Contaminated Cells: 999" name="ContaminatedCellsLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Source Output: 999" name="SourceOutputLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Decay Applied: 999" name="DecayAppliedLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Active Desync Cells: 999" name="ActiveDesyncCellsLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Simulation Time: 999s" name="SimulationTimeLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Simulation State: Null" name="SimulationStateLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Simulation Ticks: 9999" name="SimulationTicksLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+    </ui:VisualElement>
+    <ui:VisualElement name="MouseDebugHUD" style="flex-grow: 1; right: auto; left: auto; align-items: stretch; max-height: 768px;">
+        <ui:Label text="Mouse Cell: 999" name="MouseCellLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Cell Desync: 999" name="CellDesyncLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Cell Stabilization: 999" name="CellStabilizationLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Cell Net Delta: 9999" name="CellNetDeltaLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+        <ui:Label text="Cell Elevation: 999" name="CellElevationLabel" style="opacity: 1; font-size: 20px; -unity-font-style: bold-and-italic; color: rgb(255, 255, 255); letter-spacing: 17px;"/>
+    </ui:VisualElement>
+</ui:UXML>
