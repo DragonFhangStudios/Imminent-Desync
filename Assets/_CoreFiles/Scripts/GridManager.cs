@@ -48,6 +48,11 @@ public class GridManager : MonoBehaviour
 	[Tooltip("Emitter integrity removed per simulation tick by each operational Nullifier.")]
 	private float nullifierDrainPerTick = 1f;
 
+	[Header("Sync Infrastructure (increment 1, opt-in)")]
+	[SerializeField]
+	[Tooltip("Sync Charge generation and blueprint Reconstruction. Off by default: the Sandbox keeps instant, free building. All numbers are provisional test values.")]
+	private SyncInfrastructureSettings syncInfrastructure = new();
+
 	[Header("Containment Condition (experiment)")]
 	[SerializeField]
 	[Tooltip("On: Containment Status describes the containment network (worst operational Stabilizer). Off: legacy status from world-wide Reality Integrity.")]
@@ -151,6 +156,8 @@ public class GridManager : MonoBehaviour
 	private static readonly Color StabilizerActiveMarkerColor = new(0.60f, 1.00f, 0.60f, 1.00f);
 	private static readonly Color NullifierActiveMarkerColor = new(0.75f, 0.50f, 1.00f, 1.00f);
 	private static readonly Color InactiveMarkerColor = new(0.35f, 0.35f, 0.35f, 1.00f);
+	private static readonly Color BlueprintWaitingMarkerColor = new(0.25f, 0.45f, 0.85f, 0.70f);
+	private static readonly Color BlueprintBuildingMarkerColor = new(0.40f, 0.75f, 1.00f, 1.00f);
 
 	// Experiment A: clamp telemetry (never read by the simulation)
 	private float tickExcessClipped;
@@ -181,6 +188,13 @@ public class GridManager : MonoBehaviour
 	private static readonly Color StabilizerCriticalMarkerColor = new(1.00f, 0.50f, 0.10f, 1.00f);
 	private static readonly Color StabilizerBreachedMarkerColor = new(1.00f, 0.15f, 0.15f, 1.00f);
 	private Vector3 structureMarkerScale = Vector3.one;
+
+	// Sync Infrastructure (increment 1, opt-in)
+	private long nextPlacementOrder;
+	private readonly SyncDiagnostics syncDiagnostics = new();
+
+	public bool SyncInfrastructureEnabled => syncInfrastructure != null && syncInfrastructure.enabled;
+	public SyncDiagnostics SyncDiagnostics => syncDiagnostics;
 
 	// Primary completion hook: true once every Emitter has been reduced to zero.
 	public bool PrimaryObjectiveComplete { get; private set; }
@@ -248,12 +262,7 @@ public class GridManager : MonoBehaviour
 			timer = 0f;
 			simulationTicks++;
 
-			Simulate();
-			UpdateNullifiers();
-			CalculateIntegrity();
-			CalculateActivity();
-			UpdateContainmentStatus();
-			RenderGrid();
+			RunSimulationTick();
 		}
 
 		HandleBrushSize();
@@ -266,15 +275,50 @@ public class GridManager : MonoBehaviour
 		if (isPaused &&	Keyboard.current.periodKey.wasPressedThisFrame)
 		{
 			simulationTicks++;
-			Simulate();
-			UpdateNullifiers();
-			CalculateIntegrity();
-			CalculateActivity();
-			UpdateContainmentStatus();
-			RenderGrid();
+			RunSimulationTick();
 		}
 
 		HandleToolSelection();
+	}
+
+	// One simulation tick (also used for single-stepping while paused).
+	// With Sync Infrastructure disabled, UpdateSyncInfrastructure() does nothing and the order
+	// is exactly the previous one.
+	private void RunSimulationTick()
+	{
+		UpdateSyncInfrastructure();
+		Simulate();
+		UpdateNullifiers();
+		CalculateIntegrity();
+		CalculateActivity();
+		UpdateContainmentStatus();
+		RenderGrid();
+	}
+
+	// ----------------------------
+	// SYNC INFRASTRUCTURE (increment 1, opt-in)
+	// ----------------------------
+
+	// Generation, automatic allocation and Reconstruction for this tick. Runs before Simulate(),
+	// so a structure completed this tick stabilizes in the same tick.
+	private void UpdateSyncInfrastructure()
+	{
+		if (!SyncInfrastructureEnabled)
+			return;
+
+		bool completed = SyncInfrastructure.Step(structures, IsCleanGround, syncInfrastructure, syncDiagnostics);
+
+		if (completed)
+		{
+			// A completed structure may now relay and stabilize.
+			RefreshNetwork();
+		}
+	}
+
+	// Clean ground uses the game's own contamination definition (Desync above the threshold = contaminated).
+	private bool IsCleanGround(Vector2Int position)
+	{
+		return grid[position.x, position.y].Desync <= contaminationThreshold;
 	}
 
 	private void HandleToolSelection()
@@ -1143,7 +1187,41 @@ public class GridManager : MonoBehaviour
 		stats.isPaused = isPaused;
 
 		stats.simulationTicks = simulationTicks;
+
+		if (SyncInfrastructureEnabled)
+		{
+			AddSyncDiagnostics(ref stats);
+		}
+
 		return stats;
+	}
+
+	// Sync Infrastructure diagnostics for the HUD (only when enabled; otherwise the fields stay empty).
+	private void AddSyncDiagnostics(ref DebugStats stats)
+	{
+		stats.syncEnabled = true;
+		stats.syncGenerated = syncDiagnostics.Generated;
+		stats.syncDemand = syncDiagnostics.Demand;
+		stats.syncDistributed = syncDiagnostics.Distributed;
+		stats.syncUnused = syncDiagnostics.Unused;
+		stats.blueprintsWaitingConnection = syncDiagnostics.WaitingForConnection;
+		stats.blueprintsWaitingCleanGround = syncDiagnostics.WaitingForCleanGround;
+		stats.blueprintsWaitingCharges = syncDiagnostics.WaitingForCharges;
+		stats.blueprintsReconstructing = syncDiagnostics.Reconstructing;
+		stats.blueprintsCompleted = syncDiagnostics.TotalCompleted;
+
+		stats.hoveredConstructionText = "";
+
+		foreach (var structure in structures)
+		{
+			if (structure.Position.x != hoveredX || structure.Position.y != hoveredY)
+				continue;
+
+			stats.hoveredConstructionText = structure.UnderConstruction
+				? $"{structure.Type} blueprint {structure.ChargesDelivered}/{structure.ChargesRequired} ({structure.Construction})"
+				: $"{structure.Type} (operational)";
+			break;
+		}
 	}
 
 	private bool CanPlaceStructure(int x, int y)
@@ -1223,6 +1301,15 @@ public class GridManager : MonoBehaviour
 
 	private void AddStructure(PlacedStructure structure)
 	{
+		structure.PlacementOrder = ++nextPlacementOrder;
+
+		// Reconstruction: placement stays free and immediate, but with Sync Infrastructure enabled
+		// Stabilizers and Nullifiers start as blueprints that must be built with Sync Charges.
+		if (SyncInfrastructureEnabled)
+		{
+			SyncInfrastructure.MakeBlueprint(structure, syncInfrastructure);
+		}
+
 		structures.Add(structure);
 
 		grid[structure.Position.x, structure.Position.y].Structure =
@@ -1253,12 +1340,13 @@ public class GridManager : MonoBehaviour
 		InfrastructureNetwork.Recalculate(structures, connectionRange);
 
 		// Stabilizer operational requirement: the stabilization simulation only
-		// runs for nodes whose structure is connected to the network.
+		// runs for nodes whose structure is connected to the network and, with
+		// Sync Infrastructure enabled, fully built.
 		foreach (var structure in structures)
 		{
 			if (structure.Node != null)
 			{
-				structure.Node.IsActive = structure.IsConnected;
+				structure.Node.IsActive = structure.IsConnected && !structure.UnderConstruction;
 			}
 		}
 
@@ -1273,7 +1361,7 @@ public class GridManager : MonoBehaviour
 	{
 		foreach (var structure in structures)
 		{
-			if (structure.Type != StructureType.Nullifier || !structure.IsConnected)
+			if (structure.Type != StructureType.Nullifier || !structure.IsConnected || structure.UnderConstruction)
 				continue;
 
 			Emitter target = FindNullifierTarget(structure.Position);
@@ -1426,6 +1514,14 @@ public class GridManager : MonoBehaviour
 
 	private Color GetMarkerColor(PlacedStructure structure)
 	{
+		// Sync Infrastructure (opt-in): unfinished blueprints are blue, brighter while being built.
+		if (structure.UnderConstruction)
+		{
+			return structure.Construction == ConstructionStatus.Reconstructing
+				? BlueprintBuildingMarkerColor
+				: BlueprintWaitingMarkerColor;
+		}
+
 		switch (structure.Type)
 		{
 			case StructureType.Core:

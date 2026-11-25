@@ -44,6 +44,16 @@ namespace ImminentDesync.Tests.EditMode
 			Assert.AreEqual(BaselineTicksToNullify, report.RunA.TicksToNullify,
 				"Ticks to nullify differ from the 2026-11-23 baseline.");
 		}
+
+		[Test]
+		public void Sandbox_SyncInfrastructure_IsDisabled()
+		{
+			EditorSceneManager.OpenScene("Assets/_CoreFiles/Scenes/Sandbox.unity", OpenSceneMode.Single);
+			GridManager gm = UnityEngine.Object.FindAnyObjectByType<GridManager>();
+
+			Assert.IsNotNull(gm);
+			Assert.IsFalse(gm.SyncInfrastructureEnabled, "The Sandbox must keep instant, free building.");
+		}
 	}
 
 	internal static class SandboxSmokeHarness
@@ -104,6 +114,7 @@ namespace ImminentDesync.Tests.EditMode
 
 			GridManager gm = UnityEngine.Object.FindAnyObjectByType<GridManager>();
 			Check("Sandbox scene contains a GridManager", gm != null, "");
+			Line("Sync Infrastructure enabled in the Sandbox: " + gm.SyncInfrastructureEnabled + " (must be False)");
 
 			if (verbose)
 			{
@@ -241,15 +252,13 @@ namespace ImminentDesync.Tests.EditMode
 			return new ScenarioResult { FinalTotalDesync = total, History = history.ToString(), TicksToNullify = ticksToNullify };
 		}
 
-		// Same call order as the tick block inside GridManager.Update().
-		private static void Tick(GridManager gm)
+		// The tick GridManager.Update() runs. Since increment 1 this is RunSimulationTick(), which first calls
+		// UpdateSyncInfrastructure() (a no-op while Sync Infrastructure is disabled, as in the Sandbox) and
+		// then the original sequence: Simulate, UpdateNullifiers, CalculateIntegrity, CalculateActivity,
+		// UpdateContainmentStatus, RenderGrid.
+		internal static void Tick(GridManager gm)
 		{
-			Invoke(gm, "Simulate");
-			Invoke(gm, "UpdateNullifiers");
-			Invoke(gm, "CalculateIntegrity");
-			Invoke(gm, "CalculateActivity");
-			Invoke(gm, "UpdateContainmentStatus");
-			Invoke(gm, "RenderGrid");
+			Invoke(gm, "RunSimulationTick");
 		}
 
 		private static void TryUpdate()

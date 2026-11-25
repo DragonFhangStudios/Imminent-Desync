@@ -160,6 +160,14 @@ public class HUDController : MonoBehaviour
 
 		containmentNodeLabel.text = $"Containment Nodes: {stats.containmentNodeCount} ({stats.operationalNodeCount} operational)";
 
+		// Sync Infrastructure diagnostics (increment 1, opt-in): shown only while it is enabled.
+		if (stats.syncEnabled)
+		{
+			containmentNodeLabel.text +=
+				$"\nSync Charges: +{stats.syncGenerated}/tick  |  Demand {stats.syncDemand}  |  Delivered {stats.syncDistributed}  |  Unused {stats.syncUnused}" +
+				$"\nBlueprints: {stats.blueprintsReconstructing} building  |  {stats.blueprintsWaitingCharges} waiting for charges  |  {stats.blueprintsWaitingCleanGround} on contaminated ground  |  {stats.blueprintsWaitingConnection} disconnected  |  {stats.blueprintsCompleted} completed";
+		}
+
 		// ---- Desync field ----
 		totalDesyncLabel.text = $"Total Desync: {stats.totalDesync:N0}  ({stats.worldDesyncDelta:+0.0;-0.0;0.0}/tick)";
 
@@ -184,6 +192,11 @@ public class HUDController : MonoBehaviour
 
 		// ---- Hovered cell ----
 		mouseCellLabel.text = $"Mouse Cell: ({stats.mouseX}, {stats.mouseY})";
+
+		if (stats.syncEnabled && !string.IsNullOrEmpty(stats.hoveredConstructionText))
+		{
+			mouseCellLabel.text += $"  |  {stats.hoveredConstructionText}";
+		}
 
 		cellDesyncLabel.text = stats.hoveredExcess > 0f
 			? $"Cell Desync: {stats.hoveredDesync:F3}  ({stats.hoveredNetDelta:+0.000;-0.000;0.000}/tick, +{stats.hoveredExcess:F3} clipped at cap)"

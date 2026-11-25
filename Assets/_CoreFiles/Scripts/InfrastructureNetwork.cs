@@ -8,6 +8,8 @@ using UnityEngine;
 // - A structure is connected if it is within connectionRange of a connected
 //   structure that can relay.
 // - Relays: Core and Stabilizer. Nullifiers connect but do not extend reach.
+// - Unfinished blueprints (UnderConstruction, only with Sync Infrastructure enabled) connect
+//   but do not relay, whatever their type.
 //
 // The result depends only on positions, types and range (not list order),
 // so connectivity is deterministic.
@@ -24,6 +26,11 @@ public static class InfrastructureNetwork
 	{
 		return type == StructureType.Core ||
 			type == StructureType.Stabilizer;
+	}
+
+	public static bool CanRelay(PlacedStructure structure)
+	{
+		return !structure.UnderConstruction && CanRelay(structure.Type);
 	}
 
 	public static void Recalculate(List<PlacedStructure> structures, float connectionRange)
@@ -58,7 +65,7 @@ public static class InfrastructureNetwork
 
 				candidate.IsConnected = true;
 
-				if (CanRelay(candidate.Type))
+				if (CanRelay(candidate))
 				{
 					frontier.Enqueue(candidate);
 				}
@@ -80,7 +87,7 @@ public static class InfrastructureNetwork
 
 		foreach (var structure in structures)
 		{
-			if (!structure.IsConnected || !CanRelay(structure.Type))
+			if (!structure.IsConnected || !CanRelay(structure))
 				continue;
 
 			if ((position - structure.Position).sqrMagnitude <= rangeSq)
