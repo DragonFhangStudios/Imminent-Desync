@@ -177,6 +177,12 @@ Increment 3 onward, Gate D and The Basin remain unauthorized.
    S1 the Sync Core's surroundings always stay buildable; S2 generation always covers the starting foothold's upkeep;
    S3 Stabilizers keep a small charge store; S4 Reality Integrity defeat ends a truly collapsed mission. Implemented in
    increment 2 (see `Docs/SYNC_INFRASTRUCTURE.md` §8); their numbers remain provisional.
+   **S1 interpretation [Approved, provisional] 2026-11-25:** S1 is the Sync Core's emergency Reconstruction radius.
+   Construction is permitted on contaminated ground within it, without passive stabilization or immunity to Desync.
+   The three-cell radius stays configurable and provisional until playtesting. Future acceptance testing must include
+   a prolonged network collapse where the original gap becomes contaminated and the player rebuilds progressively from
+   the Sync Core; the test passes only if recovery is achievable (§8.5 there). Further balancing is deferred to
+   playtesting.
 4. Reconstruction details: costs and build times; the behavior of blueprints waiting on contaminated ground.
 5. Supply tuning: generation, consumption, storage and the effectiveness curve.
 6. The December 20 Basin target: move it, reduce the scope, or a two-step plan.

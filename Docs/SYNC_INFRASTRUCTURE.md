@@ -128,7 +128,7 @@ consumption, storage, effectiveness curve) is **not decided**: every number belo
 
 | # | Assumption |
 |---|---|
-| B1 | **S1 is implemented as a guarantee on the clean-ground rule** (within the safe zone a blueprint may be built on contaminated ground), not as a new stabilization source at the Core. The specification's example ("a small fixed stabilization at the Sync Core") would change the Desync simulation and still not guarantee buildable ground under heavy Desync. Easy to switch if preferred. |
+| B1 | **Director decision 2026-11-25: kept as the provisional first-playable design.** S1 is the Sync Core's *emergency Reconstruction radius*: within it, blueprints may be built on contaminated ground. It provides **no passive stabilization and no immunity to Desync**; the Core's surroundings can still become contaminated. The radius (`coreSafeZoneRadius`, 3 cells) stays configurable and provisional until playtesting. The specification's alternative example (a small fixed stabilization at the Sync Core) was not adopted. |
 | B2 | **S2's foothold** = the first completed Stabilizers by placement order (2 by default). If one is removed, the next-oldest becomes part of the foothold. Only their upkeep is reserved, not their refill. |
 | B3 | With U2 on, a **disconnected** Stabilizer stays active on its store (U2/S3: "stores deplete"); with U2 off it stops at once, as before. |
 | B4 | A Stabilizer **completed this tick** starts with an empty store and gets supply from the next tick, so it shows *Starved* for one tick. |
@@ -151,3 +151,20 @@ simulation with an Emitter at (50,52):
 
 `S1_PlayerCanRebuildFromTheSyncCore_AfterCollapse` checks the "can the player still recover?" case where Desync has
 already covered the ground around a newly placed Sync Core.
+
+### 8.5 Required future acceptance scenario: prolonged network collapse (not yet implemented)
+
+Required by the Director on 2026-11-25 for future acceptance testing. It is **not** covered by the tests above: in
+§8.4 the rebuilt gap is still clean, and the S1 test only shows that a blueprint can complete.
+
+1. Sever the network and let the collapse continue long enough that the **original connection gap itself becomes
+   contaminated** (outside the S1 radius, so a blueprint there cannot simply be rebuilt).
+2. The player must **rebuild progressively from the Sync Core**: start inside the emergency Reconstruction radius, then
+   extend outward step by step as completed Stabilizers clean the ground for the next blueprint.
+3. Pass criterion: **recovery is achievable**: the network reaches and reconnects the stranded Stabilizers and Desync
+   in their footprints is pushed back. Completing a single blueprint is not enough. Report it with the metric standard
+   (centre, footprint, effectiveness and connectivity separately), against the provisional values in §8.2.
+4. If recovery is not achievable with the provisional values, report it as a finding for the tuning decision rather
+   than changing the values.
+
+Balancing is deferred until playtesting; the Sandbox baseline stays unchanged.
