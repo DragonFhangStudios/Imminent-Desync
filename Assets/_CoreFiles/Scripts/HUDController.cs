@@ -166,6 +166,13 @@ public class HUDController : MonoBehaviour
 			containmentNodeLabel.text +=
 				$"\nSync Charges: +{stats.syncGenerated}/tick  |  Demand {stats.syncDemand}  |  Delivered {stats.syncDistributed}  |  Unused {stats.syncUnused}" +
 				$"\nBlueprints: {stats.blueprintsReconstructing} building  |  {stats.blueprintsWaitingCharges} waiting for charges  |  {stats.blueprintsWaitingCleanGround} on contaminated ground  |  {stats.blueprintsWaitingConnection} disconnected  |  {stats.blueprintsCompleted} completed";
+
+			// U2 Stabilizer supply (increment 2, opt-in).
+			if (stats.supplyEnabled)
+			{
+				containmentNodeLabel.text +=
+					$"\nStabilizer Supply: {stats.stabilizersSupplied} supplied  |  {stats.stabilizersOnStore} on store  |  {stats.stabilizersReduced} reduced  |  {stats.stabilizersStarved} starved  |  Delivered {stats.supplyDelivered}/{stats.supplyDemand}  |  Stored {stats.storedCharges}";
+			}
 		}
 
 		// ---- Desync field ----
@@ -189,6 +196,12 @@ public class HUDController : MonoBehaviour
 		brushRadiusLabel.text = $"Tool: {stats.currentToolName}  |  Brush Radius: {brushRadius}";
 
 		simulationStateLabel.text = $"Simulation: {(stats.isPaused ? "Paused" : "Running")}  |  Tick {stats.simulationTicks:N0}";
+
+		// Reality Integrity defeat (D1 / S4, opt-in). Never true while it is disabled.
+		if (stats.missionDefeated)
+		{
+			simulationStateLabel.text += "  |  MISSION FAILED (Reality Integrity collapse)";
+		}
 
 		// ---- Hovered cell ----
 		mouseCellLabel.text = $"Mouse Cell: ({stats.mouseX}, {stats.mouseY})";

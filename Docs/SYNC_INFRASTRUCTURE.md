@@ -1,8 +1,10 @@
-# Sync Infrastructure — Sync Charges and Reconstruction (roadmap increment 1)
+# Sync Infrastructure — Sync Charges, Reconstruction, Stabilizer supply and safeguards
 
-**Status:** implemented, opt-in, verified by automated EditMode tests. **Not yet played by the Director**
-(Gate B is pending), so its controls, presentation and feel are unverified.
-**Design reference:** `Docs/DESIGN_DECISIONS.md` §4.1 (D2-A Reconstruction) and §4.3 (Option A allocation).
+**Status:** roadmap increments 1 and 2 implemented, opt-in, verified by automated EditMode tests. **Not yet
+played by the Director** (Gate B is pending), so controls, presentation and feel are unverified.
+**Design reference:** `Docs/DESIGN_DECISIONS.md` §4.1 (D2-A Reconstruction), §4.2 (U2 supply), §4.3 (Option A
+allocation) and §7 item 3 (safeguards S1–S4, approved by the Director on 2026-11-25). Increment 2 (U2 supply and
+safeguards) is described in §8 below.
 
 ## 1. What it does
 
@@ -55,10 +57,11 @@ All numbers are **test fixtures, not balance decisions**.
 | A9 | Turning the system on only affects structures placed afterwards; turning it off leaves unfinished blueprints unfinished. Enable it before placing anything. | Avoids converting existing structures mid-game. |
 | A10 | Marker colors: waiting blueprints dim blue, blueprints being built bright blue. | Minimal presentation only; increment 6 owns presentation. |
 
-## 5. Not in this increment
+## 5. Not in increment 1
 
-U2 Stabilizer consumption, suppression and recovery variants, Nullifier reconfiguration, Emitter Restoration, The Basin,
-player allocation controls (issue #2), UI art integration, travelling packet entities, routing or logistics interfaces.
+U2 Stabilizer consumption (added in increment 2, §8), suppression and recovery variants, Nullifier reconfiguration,
+Emitter Restoration, The Basin, player allocation controls (issue #2), UI art integration, travelling packet entities,
+routing or logistics interfaces.
 
 ## 6. Automated verification (EditMode, headless)
 
@@ -70,6 +73,8 @@ Run with the studio's locking runner (`-Mode Tests -TestPlatform EditMode`). Tes
 | `SyncChargeAllocatorTests` | Supply limits, demand limits, placement order, category round-robin, determinism. |
 | `ReconstructionTests` | Generation, completion after exactly the cost, Nullifier cost, disconnected and contaminated blueprints, no relay until complete, blocked blueprints not blocking others, spam vs. throughput, scarce supply order, determinism. |
 | `SyncInfrastructureSceneTests` | The same rules inside the real `GridManager` and Sandbox scene (enabled in memory only, never saved): no stabilization until complete, chain building, occupancy, contaminated placement, unfinished Nullifier, determinism, and disabled = instant building. |
+| `StabilizerSupplyTests` (increment 2) | U2 supply, store filling, S3 running on store then starving, partial supply, over-expansion, S2 foothold priority and generation floor, S1 safe zone, U2 off, the severed-connection scenario, determinism. |
+| `StabilizerSupplySceneTests` (increment 2) | In the real simulation: the **required severed-connection acceptance scenario** (compared with an unsevered control run), recovery from a collapse around the Sync Core, effectiveness scaling stabilization, S4 defeat on/off/after victory, Sandbox defaults off. |
 
 **Not verified automatically:** interactive input, HUD layout and readability, marker colors, Play-mode timing (frame-rate
 dependent tick rate), and how it feels to play. These need the Director's playtest.
@@ -83,3 +88,66 @@ dependent tick rate), and how it feels to play. These need the Director's playte
 3. Place a Core (key `4`, left click), then Stabilizers (`2`) within 8 cells, and watch the HUD's *Sync Charges* and
    *Blueprints* lines and the blue blueprint markers. Hover a structure to see its progress.
 4. Stop Play. Sync Infrastructure is off again automatically.
+5. For increment 2, also tick **Stabilizer Supply Enabled** in the same block (and, to try S4, **Reality Integrity
+   Defeat** further down) during Play mode before placing anything. See §8.
+
+## 8. Increment 2 — U2 Stabilizer supply and recovery safeguards S1–S4
+
+**Authorized 2026-11-25** (Director: "Approve S1–S4 and start increment 2"). The supply tuning (generation,
+consumption, storage, effectiveness curve) is **not decided**: every number below is a provisional test value.
+
+### 8.1 Behavior
+
+| Area | Behavior |
+|---|---|
+| Opt-in | `Sync Infrastructure → Stabilizer Supply Enabled` (needs `Enabled` too). Default **off**: Stabilizers need no supply, exactly as in increment 1 and the Sandbox. |
+| Upkeep (U2) | Every completed Stabilizer consumes `stabilizerUpkeepPerTick` Sync Charges per tick, from what it received this tick plus its store. |
+| Store (S3) | Each Stabilizer stores up to `stabilizerStoreCapacity` charges. Connected Stabilizers request upkeep plus refill (up to `maxSupplyIntakePerTick`). A disconnected Stabilizer keeps working on its store; brief disconnections do not drop it to zero at once. |
+| Effectiveness | Share of the upkeep actually consumed this tick (linear). It scales the Stabilizer's whole stabilization. Full = 100 %; partial = reduced; nothing and an empty store = **zero stabilization**. |
+| Allocation | Stabilizer supply is the second allocator category: one charge at a time, alternating with construction, placement order within each category (Option A). |
+| Foothold (S2) | The first `footholdStabilizerCount` completed Stabilizers (placement order) get their upkeep before anything else, and each Sync Core always generates at least their total upkeep. |
+| Safe zone (S1) | Blueprints within `coreSafeZoneRadius` of a Sync Core count as on buildable ground even when contaminated: there is always somewhere to rebuild from. Applies whenever Sync Infrastructure is on. |
+| Defeat (S4) | `GridManager → Reality Integrity Defeat` (separate opt-in, default off). Below `defeatIntegrityThreshold`, the mission fails: `MissionDefeated` latches, the simulation pauses, the HUD says MISSION FAILED. Never after the objective is complete. |
+| Diagnostics | HUD line *Stabilizer Supply* (supplied, on store, reduced, starved, delivered/demand, stored), hover text with effectiveness and store, grey marker = starved. |
+| Connectivity | Unchanged: Desync and starvation never disconnect or stop relaying (suppression rules stay deferred). |
+
+### 8.2 Provisional values (Director decision pending: Part 4 item 6)
+
+| Setting | Test value | Effect at the Sandbox tick rate (0.1 s) |
+|---|---|---|
+| `coreGenerationPerTick` | 4 (scene default); tests use 8 | 8 per tick sustains four Stabilizers at full strength |
+| `stabilizerUpkeepPerTick` | 2 | Effectiveness steps of 50 % |
+| `stabilizerStoreCapacity` | 20 | About 1 s of autonomy when disconnected |
+| `maxSupplyIntakePerTick` | 4 | An empty store refills in about 1 s |
+| `footholdStabilizerCount` | 2 | Generation never below 4 per tick with U2 on |
+| `coreSafeZoneRadius` | 3 cells | About 28 cells around the Core always buildable |
+| `defeatIntegrityThreshold` | 50 % | D1: configurable, provisional until playtest |
+| Effectiveness curve | linear (consumed ÷ upkeep) | |
+
+### 8.3 Engineering assumptions for increment 2 (Director review)
+
+| # | Assumption |
+|---|---|
+| B1 | **S1 is implemented as a guarantee on the clean-ground rule** (within the safe zone a blueprint may be built on contaminated ground), not as a new stabilization source at the Core. The specification's example ("a small fixed stabilization at the Sync Core") would change the Desync simulation and still not guarantee buildable ground under heavy Desync. Easy to switch if preferred. |
+| B2 | **S2's foothold** = the first completed Stabilizers by placement order (2 by default). If one is removed, the next-oldest becomes part of the foothold. Only their upkeep is reserved, not their refill. |
+| B3 | With U2 on, a **disconnected** Stabilizer stays active on its store (U2/S3: "stores deplete"); with U2 off it stops at once, as before. |
+| B4 | A Stabilizer **completed this tick** starts with an empty store and gets supply from the next tick, so it shows *Starved* for one tick. |
+| B5 | The Sync Core still stores nothing; only Stabilizers store (S3). |
+| B6 | **S4 defeat** pauses the simulation and logs; the results/restart flow belongs to the mission-flow increment (5). Defeat is disabled after the objective is complete (D4). |
+| B7 | Nullifiers still need no supply (N1-A belongs to increment 3). |
+
+### 8.4 Required acceptance scenario: severed connection (automated)
+
+`StabilizerSupplySceneTests.SeveredConnection_DownstreamStarves_DesyncAdvances_AndRebuildingRecovers`, in the real
+simulation with an Emitter at (50,52):
+
+1. Sync Core (50,85) → S1 (50,78) → S2 (50,71) → S3 (50,64), built from blueprints and fully supplied after 200 ticks.
+2. The player removes S1.
+3. S2 and S3 are disconnected, receive nothing, run on their stores for about 10 ticks, then stabilize nothing; Desync
+   advances into their former footprints. Measured against an **unsevered control run** with the game's own threshold:
+   centre cell, footprint contamination, effectiveness and connectivity reported separately.
+4. A new blueprint in the gap completes; S2 and S3 reconnect, supply resumes, and Desync in S3's footprint is pushed back.
+5. At every stage a legal recovery action exists (connected Sync Core, generation ≥ one upkeep, free ground in the S1 zone).
+
+`S1_PlayerCanRebuildFromTheSyncCore_AfterCollapse` checks the "can the player still recover?" case where Desync has
+already covered the ground around a newly placed Sync Core.

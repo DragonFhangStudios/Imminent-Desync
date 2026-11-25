@@ -23,6 +23,10 @@ public class ContainmentNode
 	// Inactive nodes apply no stabilization. The stabilization math itself is unchanged.
 	public bool IsActive = true;
 
+	// U2 Stabilizer supply (increment 2, opt-in): share of full strength this tick, 0..1.
+	// Always 1 while U2 supply is off, so stabilization is exactly as before.
+	public float SupplyEffectiveness = 1f;
+
 	// Condition telemetry, refreshed each tick while active. Never feeds back into the simulation.
 	public int FootprintCells;
 	public int ContaminatedFootprintCells;

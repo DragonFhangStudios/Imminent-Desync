@@ -28,6 +28,12 @@ public class PlacedStructure
 	public int ChargesDelivered;
 	public ConstructionStatus Construction = ConstructionStatus.Operational;
 
+	// U2 Stabilizer supply (increment 2, opt-in). Untouched while U2 supply is off,
+	// so effectiveness stays 1 and Stabilizers behave as before.
+	public int StoredCharges;
+	public float SupplyEffectiveness = 1f;
+	public SupplyStatus Supply = SupplyStatus.NotApplicable;
+
 	public PlacedStructure(StructureType type, Vector2Int position)
 	{
 		Type = type;

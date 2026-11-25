@@ -83,7 +83,7 @@ and no new mechanics beyond the approved ones.
 - Players must protect infrastructure and keep supply connections intact. Severing a critical connection can cut supply
   downstream and let Desync spread again.
 - [Tuning] Generation rate, consumption rate, per-Stabilizer storage, and the curve from supply to effectiveness.
-- Implementation belongs to roadmap increment 2 (not authorized yet).
+- Implemented (opt-in) in roadmap increment 2, authorized 2026-11-25. The tuning above is still open.
 
 ### 4.3 Sync Charge allocation [Approved]: record Option A
 
@@ -165,13 +165,18 @@ infrastructure, Sync Charge generation and distribution, blueprint Reconstructio
 opt-in infrastructure development. This does not authorize Gate D, The Basin, or later increments. Manual verification
 that has not been performed is not marked as passed.
 
+**2026-11-25:** the Director approved safeguards S1–S4 and authorized roadmap increment 2 (U2 Stabilizer supply, the
+effectiveness curve, starvation and the recovery safeguards). Supply tuning (Part 4 item 6) is still undecided.
+Increment 3 onward, Gate D and The Basin remain unauthorized.
+
 ## 7. Open Director decisions
 
 1. Recovery mathematics after reconfiguration (post-victory decay, Restoration strength, radius and duration, or a combination).
 2. Nullifier details: readiness conditions, stage durations and effects, redundancy behavior, charge costs.
-3. Recovery safeguards S1–S4 (proposals): S1 the Sync Core's surroundings always stay buildable; S2 generation always
-   covers the starting foothold's upkeep; S3 Stabilizers keep a small charge store; S4 Reality Integrity defeat ends a
-   truly collapsed mission.
+3. ~~Recovery safeguards S1–S4~~ — **[Approved] 2026-11-25** (Director: "Approve S1–S4 and start increment 2"):
+   S1 the Sync Core's surroundings always stay buildable; S2 generation always covers the starting foothold's upkeep;
+   S3 Stabilizers keep a small charge store; S4 Reality Integrity defeat ends a truly collapsed mission. Implemented in
+   increment 2 (see `Docs/SYNC_INFRASTRUCTURE.md` §8); their numbers remain provisional.
 4. Reconstruction details: costs and build times; the behavior of blueprints waiting on contaminated ground.
 5. Supply tuning: generation, consumption, storage and the effectiveness curve.
 6. The December 20 Basin target: move it, reduce the scope, or a two-step plan.
