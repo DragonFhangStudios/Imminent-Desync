@@ -17,6 +17,17 @@ public class PlacedStructure
 	// Prototype visual marker (a single tinted sprite).
 	public SpriteRenderer Marker;
 
+	// Placement sequence number (1, 2, 3 ...). Reconstruction serves blueprints in this order.
+	public long PlacementOrder;
+
+	// Reconstruction (increment 1, opt-in). Only true when Sync Infrastructure is enabled.
+	// An unfinished blueprint connects to the network but gives no stabilization, no relaying
+	// and no Nullifier effect until it has received ChargesRequired Sync Charges.
+	public bool UnderConstruction;
+	public int ChargesRequired;
+	public int ChargesDelivered;
+	public ConstructionStatus Construction = ConstructionStatus.Operational;
+
 	public PlacedStructure(StructureType type, Vector2Int position)
 	{
 		Type = type;

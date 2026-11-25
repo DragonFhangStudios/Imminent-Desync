@@ -66,4 +66,17 @@ public struct DebugStats
 	// HUD cleanup: real change in world Desync since the previous tick
 	// (replaces the old netDelta, which duplicated total Desync).
 	public float worldDesyncDelta;
+
+	// Sync Infrastructure (increment 1, opt-in). Empty while it is disabled.
+	public bool syncEnabled;
+	public int syncGenerated;
+	public int syncDemand;
+	public int syncDistributed;
+	public int syncUnused;
+	public int blueprintsWaitingConnection;
+	public int blueprintsWaitingCleanGround;
+	public int blueprintsWaitingCharges;
+	public int blueprintsReconstructing;
+	public int blueprintsCompleted;
+	public string hoveredConstructionText;
 }
