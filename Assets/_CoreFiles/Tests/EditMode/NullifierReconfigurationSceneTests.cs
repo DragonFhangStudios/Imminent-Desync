@@ -264,9 +264,11 @@ namespace ImminentDesync.Tests.EditMode
 			Assert.IsTrue(gm.PrimaryObjectiveComplete);
 		}
 
-		// Diagnostic, not a pass/fail on tuning (supply tuning, decision 5, is open; finding F3): at the
-		// shipped defaults with U2 supply on, generation 4 equals the two-Stabilizer foothold's reserved upkeep,
-		// so a Nullifier blueprint placed after the foothold receives nothing. Records what happens.
+		// Finding F3, U2 supply on at the shipped defaults. Recorded 2026-11-25 (increment 3 alone, generation 4):
+		// the two-Stabilizer foothold's reserved upkeep took the whole generation, so a Nullifier blueprint placed
+		// after the foothold received 0 of 60 charges in 2,000 ticks. Since increment 2A was merged in (2026-11-26:
+		// generation 8 and a 25 % construction share after the foothold's upkeep), construction must never fully
+		// starve, so the Nullifier must now be built. Records the build time; supply tuning (decision 5) stays open.
 		[Test]
 		[Timeout(600000)]
 		public void Diagnostic_U2SupplyOn_ShippedDefaults_NullifierAfterFoothold()
@@ -289,6 +291,7 @@ namespace ImminentDesync.Tests.EditMode
 					: $"Nullifier still a blueprint after {Window} ticks, {n.ChargesDelivered}/{n.ChargesRequired} charges ({n.Construction}); generated {SyncDiagnosticsOf().Generated}/tick, distributed {SyncDiagnosticsOf().Distributed}");
 			TestContext.WriteLine(line);
 			Debug.Log(line);
+			Assert.Greater(built, 0, "F3 (fixed in increment 2A): the Nullifier blueprint is built after the foothold stands.");
 		}
 
 		private SyncDiagnostics SyncDiagnosticsOf() => gm.SyncDiagnostics;
