@@ -191,6 +191,14 @@ remain provisional; decision 5 stays open beyond these values. `Sandbox.unity` i
 approved and implemented, with publication held until 2A validation and the integration review are complete.
 Increment 4 onward, Gate D and The Basin remain unauthorized. Details: `SYNC_INFRASTRUCTURE.md` §8.6.
 
+**2026-11-26, later:** the Director approved publication of increment 2A and keeping the playtest scene in the
+increment 2 pull request. He also approved integrating 2A into the increment 3 branch by a merge that preserves the
+increment 3 commit and its history, followed by the full regression suite and a compatibility check of construction,
+Stabilizer upkeep and Nullifier preparation. F6 (S4 timing) is kept as an unresolved balancing finding: no threshold
+or tuning change. The combined build is to be prepared for interactive playtesting, with no further feature
+development. The increment 2 pull request stays unmerged. Increment 4, Gate D and The Basin remain unauthorized.
+Integration details: `SYNC_INFRASTRUCTURE.md` §9.5.
+
 ## 7. Open Director decisions
 
 1. Recovery mathematics after reconfiguration (post-victory decay, Restoration strength, radius and duration, or a combination).
