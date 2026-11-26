@@ -59,8 +59,8 @@ public class GridManager : MonoBehaviour
 	private bool realityIntegrityDefeat = false;
 
 	[SerializeField, Range(0f, 100f)]
-	[Tooltip("PROVISIONAL test value (D1: configurable, provisional until playtest). Defeat below this Reality Integrity, in percent.")]
-	private float defeatIntegrityThreshold = 50f;
+	[Tooltip("PROVISIONAL test value (D1: configurable, provisional until playtest; increment 2A: 30, was 50). Defeat below this Reality Integrity, in percent.")]
+	private float defeatIntegrityThreshold = 30f;
 
 	[Header("Containment Condition (experiment)")]
 	[SerializeField]
@@ -205,6 +205,14 @@ public class GridManager : MonoBehaviour
 	public bool SyncInfrastructureEnabled => syncInfrastructure != null && syncInfrastructure.enabled;
 	public SyncDiagnostics SyncDiagnostics => syncDiagnostics;
 
+	// Increment 2A debug overlay (backquote key). Not serialized: always starts hidden.
+	private bool syncDebugOverlayVisible;
+	private GUIStyle syncDebugOverlayStyle;
+	public bool SyncDebugOverlayVisible => syncDebugOverlayVisible;
+	public string SyncDebugOverlayText => SyncDebugOverlay.Build(
+		syncInfrastructure, syncDiagnostics, structures, realityIntegrity,
+		realityIntegrityDefeat, defeatIntegrityThreshold, MissionDefeated, simulationTicks);
+
 	// Primary completion hook: true once every Emitter has been reduced to zero.
 	public bool PrimaryObjectiveComplete { get; private set; }
 
@@ -291,6 +299,38 @@ public class GridManager : MonoBehaviour
 		}
 
 		HandleToolSelection();
+
+		if (Keyboard.current.backquoteKey.wasPressedThisFrame)
+		{
+			syncDebugOverlayVisible = !syncDebugOverlayVisible;
+		}
+	}
+
+	// Text-only Sync debug overlay (increment 2A). Hidden until toggled with the backquote key; reads
+	// simulation state only and changes nothing.
+	private void OnGUI()
+	{
+		if (!syncDebugOverlayVisible)
+			return;
+
+		string text = SyncDebugOverlay.Build(
+			syncInfrastructure, syncDiagnostics, structures, realityIntegrity,
+			realityIntegrityDefeat, defeatIntegrityThreshold, MissionDefeated, simulationTicks);
+
+		if (syncDebugOverlayStyle == null)
+		{
+			syncDebugOverlayStyle = new GUIStyle(GUI.skin.box)
+			{
+				alignment = TextAnchor.UpperLeft,
+				fontSize = 13,
+				wordWrap = false,
+				richText = false,
+				padding = new RectOffset(8, 8, 6, 6)
+			};
+		}
+
+		Vector2 size = syncDebugOverlayStyle.CalcSize(new GUIContent(text));
+		GUI.Box(new Rect(Screen.width - size.x - 10f, 10f, size.x, size.y), text, syncDebugOverlayStyle);
 	}
 
 	// One simulation tick (also used for single-stepping while paused).
