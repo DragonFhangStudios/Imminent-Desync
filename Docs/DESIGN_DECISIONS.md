@@ -182,7 +182,9 @@ Increment 3 onward, Gate D and The Basin remain unauthorized.
    The three-cell radius stays configurable and provisional until playtesting. Future acceptance testing must include
    a prolonged network collapse where the original gap becomes contaminated and the player rebuilds progressively from
    the Sync Core; the test passes only if recovery is achievable (§8.5 there). Further balancing is deferred to
-   playtesting.
+   playtesting. The test was implemented and run on 2026-11-25. Recovery is achievable by progressive rebuilding, but
+   not with a single Stabilizer. At the shipped defaults it is only partial, and it raises supply-tuning findings
+   F1–F5 (`SYNC_INFRASTRUCTURE.md` §8.5.2). They are inputs to decision 5; nothing was changed.
 4. Reconstruction details: costs and build times; the behavior of blueprints waiting on contaminated ground.
 5. Supply tuning: generation, consumption, storage and the effectiveness curve.
 6. The December 20 Basin target: move it, reduce the scope, or a two-step plan.

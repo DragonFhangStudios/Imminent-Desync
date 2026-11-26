@@ -73,6 +73,7 @@ Run with the studio's locking runner (`-Mode Tests -TestPlatform EditMode`). Tes
 | `SyncChargeAllocatorTests` | Supply limits, demand limits, placement order, category round-robin, determinism. |
 | `ReconstructionTests` | Generation, completion after exactly the cost, Nullifier cost, disconnected and contaminated blueprints, no relay until complete, blocked blueprints not blocking others, spam vs. throughput, scarce supply order, determinism. |
 | `SyncInfrastructureSceneTests` | The same rules inside the real `GridManager` and Sandbox scene (enabled in memory only, never saved): no stabilization until complete, chain building, occupancy, contaminated placement, unfinished Nullifier, determinism, and disabled = instant building. |
+| `ProlongedCollapseSceneTests` (increment 2) | §8.5 prolonged collapse in the real simulation: naive player (diagnostic), competent player at the shipped defaults (reconnects, gap and S2 reclaimed) and at generation 8 (full recovery), determinism. |
 | `StabilizerSupplyTests` (increment 2) | U2 supply, store filling, S3 running on store then starving, partial supply, over-expansion, S2 foothold priority and generation floor, S1 safe zone, U2 off, the severed-connection scenario, determinism. |
 | `StabilizerSupplySceneTests` (increment 2) | In the real simulation: the **required severed-connection acceptance scenario** (compared with an unsevered control run), recovery from a collapse around the Sync Core, effectiveness scaling stabilization, S4 defeat on/off/after victory, Sandbox defaults off. |
 
@@ -152,10 +153,12 @@ simulation with an Emitter at (50,52):
 `S1_PlayerCanRebuildFromTheSyncCore_AfterCollapse` checks the "can the player still recover?" case where Desync has
 already covered the ground around a newly placed Sync Core.
 
-### 8.5 Required future acceptance scenario: prolonged network collapse (not yet implemented)
+### 8.5 Required acceptance scenario: prolonged network collapse
 
-Required by the Director on 2026-11-25 for future acceptance testing. It is **not** covered by the tests above: in
-§8.4 the rebuilt gap is still clean, and the S1 test only shows that a blueprint can complete.
+Required by the Director on 2026-11-25; implemented and executed the same day (Director: "Proceed with implementing
+and executing the prolonged-collapse acceptance test", within increment 2's verification scope) as
+`ProlongedCollapseSceneTests`. It covers what §8.4 does not: there the rebuilt gap is still clean, and the S1 test
+only shows that a blueprint can complete.
 
 1. Sever the network and let the collapse continue long enough that the **original connection gap itself becomes
    contaminated** (outside the S1 radius, so a blueprint there cannot simply be rebuilt).
@@ -168,3 +171,53 @@ Required by the Director on 2026-11-25 for future acceptance testing. It is **no
    than changing the values.
 
 Balancing is deferred until playtesting; the Sandbox baseline stays unchanged.
+
+#### 8.5.1 Implementation
+
+Same layout as §8.4 (Emitter (50,52); Sync Core (50,85); line (50,78) → (50,71) S2 → (50,64) S3), held for 200 ticks.
+The player removes (50,78); the collapse runs until (50,78) itself is contaminated, then 300 ticks more. The
+rebuild then starts from the emergency radius, with two scripted players using only existing player actions
+(place, remove):
+
+- **Naive:** one Stabilizer at (50,82) (3 cells from the Core), then a blueprint on the gap (50,78) once it is complete.
+- **Competent:** as many Stabilizers inside the emergency radius as generation sustains at full strength
+  (generation ÷ upkeep: 2 at the defaults, 4 at generation 8). Then 2-cell steps toward the gap ((50,80), then (50,78)),
+  each placed once the previous step is complete. After each step completes, the rearmost Stabilizer is removed to
+  stay within supply. Once reconnected, the helpers are removed, so supply goes to the link and the stranded
+  Stabilizers.
+
+Two supply configurations, neither changed to make the test pass: the **shipped provisional defaults** (generation 4)
+and the **test-fixture generation** of §8.4 (8). Reality Integrity defeat (S4) is off, so the rebuild can be measured.
+
+#### 8.5.2 Results (headless run `id-inc2-collapse-3`, 2026-11-25)
+
+| Run | Gap contaminated after the cut | Reconnected | Gap clean at end | S2 reclaimed | S3 reclaimed | Corridor contaminated (start → end) | S2 + S3 footprints contaminated |
+|---|---|---|---|---|---|---|---|
+| Defaults, naive | 468 ticks | **never** (4,000 ticks) | no | no | no | 390 → 390 | 162 → 162 |
+| Defaults, competent | 468 ticks | **yes**, rebuild tick 132 | yes | **yes** | **no** | 390 → 294 | 162 → 114 |
+| Generation 8, competent | 524 ticks | **yes**, rebuild tick 90 | yes | **yes** | **yes** | 390 → 240 | 162 → 45 |
+
+The "corridor" is x 44–56, y 59–88, 390 cells. Determinism: two fresh runs of the defaults/competent scenario
+produced identical results (grid Desync sum, event ticks, footprints).
+
+**Recovery is achievable with progressive Reconstruction from the emergency radius, but not with a single Stabilizer.**
+Findings (for the Director's tuning decision; nothing was changed):
+
+- **F1 — reach, not supply, limits the naive rebuild.** A full-strength Stabilizer's stabilization falls off linearly
+  over its 5-cell radius (20 % at 4 cells). One Stabilizer 4 cells from the gap brought the gap's Desync from about 38
+  down to about 13, but never below the threshold of 5. The front kept advancing, so the blueprint waited for clean
+  ground indefinitely, with charges unused every tick. Clustering 2–4 Stabilizers in the emergency radius and
+  stepping 2 cells at a time cleaned the gap.
+- **F2 — at the defaults, supply limits how much is reclaimed.** Generation 4 sustains two Stabilizers at full
+  strength. After reconnection, the gap and S2 were supplied (demand 8, delivered 4) and reclaimed; S3's site was not.
+- **F3 — at the defaults, construction is starved once two Stabilizers stand.** S2's foothold reservation
+  (2 × upkeep 2 = 4) equals the whole generation of 4, so construction receives nothing while two connected,
+  completed Stabilizers exist. In the setup, S3 stayed a blueprint for the whole hold. The competent rebuild worked
+  only because one foothold slot was a disconnected Stabilizer, whose reservation is skipped.
+- **F4 — the foothold follows placement order, not the player's current network.** At the moment of reconnection
+  the oldest Stabilizers (the stranded ones, deep in Desync) become the foothold and are fed first; the new link
+  starves until the player removes helpers.
+- **F5 — S4 timing.** Reality Integrity was already about 60 % when the rebuild began and fell below the provisional
+  50 % defeat threshold at rebuild tick 103–137, about the moment of reconnection. With S4 on at 50 %, this mission
+  would be lost before reclaiming anything. Integrity kept falling afterwards (about 15 %), because the Emitter keeps
+  spreading elsewhere and Sandbox decay is 0.
