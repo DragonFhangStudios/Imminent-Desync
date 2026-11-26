@@ -1,9 +1,9 @@
 # Sync Infrastructure — Sync Charges, Reconstruction, Stabilizer supply and safeguards
 
-**Status:** roadmap increments 1, 2 and 3 implemented, opt-in, verified by automated EditMode tests. Gate B (the
-Director's interactive Sandbox playtest) passed on 2026-11-25. No results have been reported yet from the separate
-increment 2 manual checklist, which plays these opt-in systems, so their controls, presentation and feel remain
-unverified.
+**Status:** roadmap increments 1, 2, 2A (playability pass, §8.6) and 3 (Nullifier reconfiguration, §9) implemented,
+opt-in, verified by automated EditMode tests; 2A was merged into the increment 3 branch on 2026-11-26 (§9.5). Gate B
+(the Director's interactive Sandbox playtest) passed on 2026-11-25. The playtest scenes and overlay have not yet been
+played by hand, so controls, presentation and feel remain unverified.
 **Design reference:** `Docs/DESIGN_DECISIONS.md` §4.1 (D2-A Reconstruction), §4.2 (U2 supply), §4.3 (Option A
 allocation) and §7 item 3 (safeguards S1–S4, approved by the Director on 2026-11-25). Increment 2 (U2 supply and
 safeguards) is described in §8 below; increment 3 (Nullifier reconfiguration N1–N3 with N1-A, `DESIGN_DECISIONS.md`
@@ -77,8 +77,10 @@ Run with the studio's locking runner (`-Mode Tests -TestPlatform EditMode`). Tes
 | `SyncChargeAllocatorTests` | Supply limits, demand limits, placement order, category round-robin, determinism. |
 | `ReconstructionTests` | Generation, completion after exactly the cost, Nullifier cost, disconnected and contaminated blueprints, no relay until complete, blocked blueprints not blocking others, spam vs. throughput, scarce supply order, determinism. |
 | `SyncInfrastructureSceneTests` | The same rules inside the real `GridManager` and Sandbox scene (enabled in memory only, never saved): no stabilization until complete, chain building, occupancy, contaminated placement, unfinished Nullifier, determinism, and disabled = instant building. |
-| `ProlongedCollapseSceneTests` (increment 2) | §8.5 prolonged collapse in the real simulation: naive player (diagnostic), competent player at the shipped defaults (reconnects, gap and S2 reclaimed) and at generation 8 (full recovery), determinism. |
-| `StabilizerSupplyTests` (increment 2) | U2 supply, store filling, S3 running on store then starving, partial supply, over-expansion, S2 foothold priority and generation floor, S1 safe zone, U2 off, the severed-connection scenario, determinism. |
+| `ProlongedCollapseSceneTests` (increment 2, re-run in 2A) | §8.5 prolonged collapse in the real simulation. Since increment 2A it runs in the playtest scene as saved (§8.6): naive player (diagnostic), competent player at the 2A defaults (F3: S3 completes in the hold; recovery), a generation-4 comparison with the 2A rules, determinism. |
+| `StabilizerSupplyTests` (increment 2, extended in 2A) | U2 supply, store filling, S3 running on store then starving, partial supply, over-expansion, S2 foothold priority and generation floor, S1 safe zone, U2 off, the severed-connection scenario, determinism. 2A: construction share (rounding, never starved at generation 4, unused share returned, order after the foothold), shipped defaults, foothold by distance (nearest first, stranded Stabilizers excluded, ties by placement order, the reconnection case of F4). |
+| `SyncDebugOverlayTests` (increment 2A) | The overlay text: Sync off, charges, reservations, upkeep, blueprint progress, each Stabilizer, MISSION FAILED, truncation, and that building it changes nothing. |
+| `PlaytestSceneTests` (increment 2A) | The playtest scene's settings and starting Emitter, the overlay starting hidden, the five-item manual checklist scripted step by step with the same coordinates, the S4 defeat tick without player action, determinism. |
 | `StabilizerSupplySceneTests` (increment 2) | In the real simulation: the **required severed-connection acceptance scenario** (compared with an unsevered control run), recovery from a collapse around the Sync Core, effectiveness scaling stabilization, S4 defeat on/off/after victory, Sandbox defaults off. |
 | `NullifierReconfigurationTests` (increment 3) | Opt-in defaults, off = no requests, preparation with Sync Charges, disconnected or out-of-range Nullifiers, blueprint Nullifiers, manual initiation only from Ready and once per sequence, stage timing and pulses, interruption resets only the current stage, one vs. four Nullifiers, removing the initiating or the last Nullifier, waiting for a full pulse store, sharing charges with construction, determinism. |
 | `NullifierReconfigurationSceneTests` (increment 3) | In the real simulation at the shipped defaults: Sandbox keeps the drain; the full sequence (build, Ready, no progress without initiation, three stages, production stops, objective flag); determinism; severing the network mid-stage; one vs. three Nullifiers; U2 on at generation 8; a diagnostic of U2 on at the shipped defaults (finding F3). |
@@ -100,6 +102,9 @@ dependent tick rate), and how it feels to play. These need the Director's playte
 6. For increment 3, also tick **Nullifier Reconfiguration Enabled** in the same block, before placing anything. Place a
    Core, then a Nullifier (`3`) within 6 cells of the Emitter and connected to the network; when its marker turns
    pale and pulses (Ready), press **N** with the cursor near it. See §9.
+7. Since increment 2A there is a ready-made scene instead: open `Assets/_CoreFiles/Scenes/Playtest_SyncSupply.unity`
+   and press **Play**. It has Sync Charges, Reconstruction, U2 and S4 on and starts with an Emitter at the grid centre.
+   Press **`** (backquote) for the debug overlay. See §8.6.
 
 ## 8. Increment 2 — U2 Stabilizer supply and recovery safeguards S1–S4
 
@@ -115,7 +120,7 @@ consumption, storage, effectiveness curve) is **not decided**: every number belo
 | Store (S3) | Each Stabilizer stores up to `stabilizerStoreCapacity` charges. Connected Stabilizers request upkeep plus refill (up to `maxSupplyIntakePerTick`). A disconnected Stabilizer keeps working on its store; brief disconnections do not drop it to zero at once. |
 | Effectiveness | Share of the upkeep actually consumed this tick (linear). It scales the Stabilizer's whole stabilization. Full = 100 %; partial = reduced; nothing and an empty store = **zero stabilization**. |
 | Allocation | Stabilizer supply is the second allocator category: one charge at a time, alternating with construction, placement order within each category (Option A). |
-| Foothold (S2) | The first `footholdStabilizerCount` completed Stabilizers (placement order) get their upkeep before anything else, and each Sync Core always generates at least their total upkeep. |
+| Foothold (S2) | The first `footholdStabilizerCount` completed Stabilizers (placement order) get their upkeep before anything else, and each Sync Core always generates at least their total upkeep. **Changed in increment 2A (§8.6):** the foothold is the connected Stabilizers nearest a Sync Core, and the generation floor also covers the construction share. |
 | Safe zone (S1) | Blueprints within `coreSafeZoneRadius` of a Sync Core count as on buildable ground even when contaminated: there is always somewhere to rebuild from. Applies whenever Sync Infrastructure is on. |
 | Defeat (S4) | `GridManager → Reality Integrity Defeat` (separate opt-in, default off). Below `defeatIntegrityThreshold`, the mission fails: `MissionDefeated` latches, the simulation pauses, the HUD says MISSION FAILED. Never after the objective is complete. |
 | Diagnostics | HUD line *Stabilizer Supply* (supplied, on store, reduced, starved, delivered/demand, stored), hover text with effectiveness and store, grey marker = starved. |
@@ -125,13 +130,13 @@ consumption, storage, effectiveness curve) is **not decided**: every number belo
 
 | Setting | Test value | Effect at the Sandbox tick rate (0.1 s) |
 |---|---|---|
-| `coreGenerationPerTick` | 4 (scene default); tests use 8 | 8 per tick sustains four Stabilizers at full strength |
+| `coreGenerationPerTick` | 4 (scene default); tests use 8. **8 since increment 2A** | 8 per tick sustains four Stabilizers at full strength |
 | `stabilizerUpkeepPerTick` | 2 | Effectiveness steps of 50 % |
 | `stabilizerStoreCapacity` | 20 | About 1 s of autonomy when disconnected |
 | `maxSupplyIntakePerTick` | 4 | An empty store refills in about 1 s |
 | `footholdStabilizerCount` | 2 | Generation never below 4 per tick with U2 on |
 | `coreSafeZoneRadius` | 3 cells | About 28 cells around the Core always buildable |
-| `defeatIntegrityThreshold` | 50 % | D1: configurable, provisional until playtest |
+| `defeatIntegrityThreshold` | 50 %. **30 % since increment 2A** | D1: configurable, provisional until playtest |
 | Effectiveness curve | linear (consumed ÷ upkeep) | |
 
 ### 8.3 Engineering assumptions for increment 2 (Director review)
@@ -139,7 +144,7 @@ consumption, storage, effectiveness curve) is **not decided**: every number belo
 | # | Assumption |
 |---|---|
 | B1 | **Director decision 2026-11-25: kept as the provisional first-playable design.** S1 is the Sync Core's *emergency Reconstruction radius*: within it, blueprints may be built on contaminated ground. It provides **no passive stabilization and no immunity to Desync**; the Core's surroundings can still become contaminated. The radius (`coreSafeZoneRadius`, 3 cells) stays configurable and provisional until playtesting. The specification's alternative example (a small fixed stabilization at the Sync Core) was not adopted. |
-| B2 | **S2's foothold** = the first completed Stabilizers by placement order (2 by default). If one is removed, the next-oldest becomes part of the foothold. Only their upkeep is reserved, not their refill. |
+| B2 | **S2's foothold** = the first completed Stabilizers by placement order (2 by default). If one is removed, the next-oldest becomes part of the foothold. Only their upkeep is reserved, not their refill. **Superseded by increment 2A (F4, §8.6):** nearest connected Stabilizers. |
 | B3 | With U2 on, a **disconnected** Stabilizer stays active on its store (U2/S3: "stores deplete"); with U2 off it stops at once, as before. |
 | B4 | A Stabilizer **completed this tick** starts with an empty store and gets supply from the next tick, so it shows *Starved* for one tick. |
 | B5 | The Sync Core still stores nothing; only Stabilizers store (S3). |
@@ -230,6 +235,51 @@ Findings (for the Director's tuning decision; nothing was changed):
   50 % defeat threshold at rebuild tick 103–137, about the moment of reconnection. With S4 on at 50 %, this mission
   would be lost before reclaiming anything. Integrity kept falling afterwards (about 15 %), because the Emitter keeps
   spreading elsewhere and Sandbox decay is 0.
+
+### 8.6 Increment 2A — playability pass
+
+**Authorized 2026-11-26** (Director: "Increment 2A: Playability Pass"; plan approved the same day). Fixes F3 and F4,
+sets provisional values, and adds a playtest scene and a debug overlay. Every value stays **provisional**; decision 5
+(supply tuning) stays open beyond these values. `Sandbox.unity` is unchanged.
+
+| Area | Behavior |
+|---|---|
+| F3: construction share | Each tick, after the foothold's upkeep is reserved, `constructionMinimumShare` (25 %) of generation, rounded up, is reserved for eligible blueprints (placement order). If no blueprint can use it, it returns to the general allocation, so nothing is wasted. With U2 on, a Sync Core always generates at least the smallest amount that covers both the foothold upkeep and the share (6 with the 2 × 2 foothold); at generation 8 this changes nothing. With construction as the only consumer (U2 off) the result is identical to before. |
+| F4: foothold by distance | The foothold is the `footholdStabilizerCount` **connected**, completed Stabilizers nearest a connected Sync Core (straight-line distance; ties by placement order). Stranded Stabilizers never hold a slot, and a newly built link near the Core is fed first. Supersedes B2. |
+| Provisional values | `coreGenerationPerTick` 8 (was 4); `defeatIntegrityThreshold` 30 % (was 50 %); `constructionMinimumShare` 25 % (new). S4 itself stays opt-in. |
+| Playtest scene | `Assets/_CoreFiles/Scenes/Playtest_SyncSupply.unity`, generated from `Sandbox.unity` by `PlaytestSceneBuilder` (Editor menu *Imminent Desync → Rebuild Sync Supply Playtest Scene*, or headless `-executeMethod PlaytestSceneBuilder.Build`). It is the Sandbox with Sync Charges, Reconstruction, U2 and S4 on, the values above, and **an Emitter placed at the grid centre (50,50) at start** (Director: so the manual and automated tests start the same way). Sandbox controls are kept. |
+| Debug overlay | **`** (backquote) shows or hides a text-only panel (top right): charges generated / delivered / unused, construction and supply delivered of demand, the foothold and construction-share reservations, upkeep, each blueprint's progress, each Stabilizer's effectiveness, status and store (`[foothold]`, `DISCONNECTED`), Reality Integrity and the S4 threshold. Read-only (`SyncDebugOverlay`); starts hidden; also available in the Sandbox, where it only appears when toggled. |
+
+#### 8.6.1 Results (headless run `id-inc2a-tests-1`, 2026-11-26)
+
+EditMode **67/67 passed** (49 earlier + 18 new). Sandbox smoke test 63/63 with its determinism repeat; final total
+Desync 21332.911624925426 = recorded baseline. The prolonged collapse (§8.5) re-run **in the playtest scene as saved**
+(Emitter at (50,50), so absolute numbers are not directly comparable with §8.5.2, where it was at (50,52)):
+
+| Run | S3 built during the hold | Gap contaminated after the cut | Reconnected | S2 / S3 reclaimed | S2 + S3 footprints contaminated | Corridor | S4 (30 %) MISSION FAILED |
+|---|---|---|---|---|---|---|---|
+| 2A defaults, naive | yes | 571 ticks | **never** (4,000 ticks) | no / no | 162 → 162 | 390 → 390 | run tick 1407 |
+| 2A defaults, competent | yes | 571 ticks | **yes**, rebuild tick 93 | **yes / yes** | 162 → 43 | 390 → 238 | run tick 1423 (rebuild tick ≈ 352, about 260 ticks after reconnection) |
+| Generation 4 with the 2A rules (comparison) | **yes** (was never in §8.5.2) | 566 ticks | **yes**, rebuild tick 104 | **yes / yes** | 162 → 45 | 390 → 240 | run tick 1421 |
+
+Determinism: two fresh runs of the competent scenario were identical. The scripted checklist run (`PlaytestSceneTests`):
+the first two Stabilizers complete 20 ticks after placement; a third, placed while two stand, completes in 20 ticks,
+receiving at least 2 charges every tick; once complete, the foothold moves to the Stabilizers nearest the Core; with
+five Stabilizers (upkeep 10 against generation 8) four run at full strength and the newest starves.
+
+Findings (for the Director; nothing was tuned beyond the brief):
+
+- **F3 fixed.** Construction receives at least 2 charges every tick while two foothold Stabilizers stand, at
+  generation 8 and, through the raised floor, at generation 4.
+- **F4 fixed.** After reconnection the rebuilt link nearest the Core is in the foothold; stranded Stabilizers are not.
+- **F1 unchanged (not in 2A scope).** The naive single-Stabilizer rebuild still never reaches the gap: reach, not
+  supply, limits it (charges are left unused every tick).
+- **F6 — S4 at 30 % ends every measured mission at about 140–147 s.** Reality Integrity is map-wide, and the Emitter
+  keeps spreading elsewhere (Sandbox decay 0). With no player action, MISSION FAILED at tick 1389 (139 s at
+  0.1 s/tick); with the checklist build near the Core, tick 1465; in the collapse runs, 1407–1423, about 260 ticks
+  after a successful reconnection, while territory was still being reclaimed. Local Reconstruction does not move this
+  much; whether a player can reach and drain the Emitter with a Nullifier in time was **not tested** and is the
+  main question for the manual playtest. Input to decision 5 and to S4 (D1).
 
 ## 9. Increment 3 — Nullifier reconfiguration N1–N3 with N1-A
 

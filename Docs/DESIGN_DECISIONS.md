@@ -180,6 +180,17 @@ not merged.
 durations, effects, redundancy and charge costs) remains open, so its values will be provisional. Gate D, The Basin,
 increment 4 onward (including N4 and the recovery mathematics) and supply-tuning changes remain unauthorized.
 
+**Increment 2A authorized (2026-11-26):** the Director authorized "Increment 2A: Playability Pass" to fix the
+increment 2 findings and make Reconstruction and U2 playable by hand. Scope: F3 (construction never fully starves:
+a minimum share of generation, provisionally 25 %, reserved for construction after the foothold's upkeep); F4 (the
+foothold chosen by distance to the Sync Core, not placement order); provisional tuning (generation 8 per tick, S4
+defeat at 30 % Reality Integrity); a Sandbox-style playtest scene with Sync Charges, Reconstruction and U2 on, which
+starts with an Emitter placed (Director: so the manual and automated tests start the same way); a text-only debug
+overlay; re-runs; a one-page report and a five-item manual checklist. The plan was approved the same day. All values
+remain provisional; decision 5 stays open beyond these values. `Sandbox.unity` is unchanged. Increment 3 remains
+approved and implemented, with publication held until 2A validation and the integration review are complete.
+Increment 4 onward, Gate D and The Basin remain unauthorized. Details: `SYNC_INFRASTRUCTURE.md` §8.6.
+
 ## 7. Open Director decisions
 
 1. Recovery mathematics after reconfiguration (post-victory decay, Restoration strength, radius and duration, or a combination).

@@ -14,6 +14,7 @@ Controls marked **(sandbox)** only work while **Sandbox Debug Controls** is enab
 | **Space** | Pause / resume the simulation. |
 | **. (Period)** | While paused: advance exactly one tick. |
 | **N** | Nullifier reconfiguration (opt-in, increment 3): initiate the sequence from the **Ready** Nullifier nearest the cursor. Does nothing while the opt-in is off. |
+| **` (Backquote)** | Show / hide the text-only **Sync debug overlay** (top right): charges generated / delivered / unused, construction share and foothold reservations, upkeep, each blueprint's progress, each Stabilizer's effectiveness and store (`[foothold]` marks the foothold), Reality Integrity and the S4 threshold. Read-only; starts hidden. (Increment 2A.) |
 
 ## Build Tool
 

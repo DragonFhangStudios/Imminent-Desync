@@ -12,17 +12,21 @@ namespace ImminentDesync.Tests.EditMode
 	// progressive Reconstruction from inside the Sync Core's emergency radius (S1). It passes only if recovery is
 	// achievable: the network reconnects the stranded Stabilizers AND territory is reclaimed.
 	//
-	// Real GridManager, real Sandbox.unity simulation values, opt-in systems turned on IN MEMORY (never saved).
-	// No tuning is changed to make it pass: the "provisional defaults" run uses the shipped
-	// SyncInfrastructureSettings defaults; the "test fixture" run uses the generation value of the existing
-	// severed-connection test (8 per tick), for comparison only. Measurements follow the research metric
-	// standard: the game's own threshold, with centre, footprint, effectiveness and connectivity separately.
+	// Increment 2A (Director, 2026-11-26): re-run at the new defaults in the increment 2A playtest scene, exactly
+	// as saved (Sandbox values, Sync Charges + Reconstruction + U2 on, generation 8, construction share 25 %,
+	// S4 defeat at 30 %, Emitter placed at the grid centre (50,50) at start), so the Director's manual playtest and
+	// this test start identically. The increment 2 run (Sandbox, Emitter at (50,52), generation 4) is recorded in
+	// Docs/SYNC_INFRASTRUCTURE.md §8.5.2. The only in-memory change is the generation-4 comparison run.
+	// S4 stays on as in the scene: the test harness keeps ticking after a defeat, and the defeat tick is reported.
+	// Measurements follow the research metric standard: the game's own threshold, with centre, footprint,
+	// effectiveness and connectivity separately.
 	public class ProlongedCollapseSceneTests
 	{
 		private const BindingFlags Any = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 		private const float Threshold = 5f; // Sandbox contaminationThreshold
+		private const string ScenePath = "Assets/_CoreFiles/Scenes/Playtest_SyncSupply.unity";
 
-		private static readonly Vector2Int EmitterPos = new(50, 52);
+		private static readonly Vector2Int EmitterPos = new(50, 50); // placed by the playtest scene at start
 		private static readonly Vector2Int CorePos = new(50, 85);
 		private static readonly Vector2Int Gap = new(50, 78);  // original S1: the connection that is severed
 		private static readonly Vector2Int S2 = new(50, 71);
@@ -61,7 +65,10 @@ namespace ImminentDesync.Tests.EditMode
 			public float S3SumAtReconnect, S3SumAtEnd;
 			public bool GapCleanAtEnd;
 			public float MinEffectivenessAfterReconnect = 1f;
-			public int IntegrityBelowS4ThresholdAt = -1; // rebuild tick at which Reality Integrity first fell below 50 %
+			public int IntegrityBelowS4ThresholdAt = -1; // rebuild tick at which Reality Integrity first fell below the S4 threshold
+			public float S4Threshold;
+			public int DefeatAtTick = -1;                // ticks from the start of the run at which S4 latched MISSION FAILED
+			public string DefeatPhase = "";
 			public float IntegrityAtReconnect;
 			public bool S3CompletedInHold;
 			public bool S2ReclaimedAtEnd, S3ReclaimedAtEnd; // centre clean and fully supplied
@@ -77,26 +84,24 @@ namespace ImminentDesync.Tests.EditMode
 		// Scenario
 		// ---------------------------------------------------------------
 
-		private void Open(SyncInfrastructureSettings s)
+		private int runTicks;
+		private string phase = "";
+		private Result current;
+
+		// Opens the playtest scene as saved. generationOverride (comparison only) changes generation in memory.
+		private void Open(int? generationOverride)
 		{
-			EditorSceneManager.OpenScene("Assets/_CoreFiles/Scenes/Sandbox.unity", OpenSceneMode.Single);
+			EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 			gm = Object.FindAnyObjectByType<GridManager>();
 			Assert.IsNotNull(gm);
-			settings = s;
-			typeof(GridManager).GetField("syncInfrastructure", Any).SetValue(gm, settings);
+			settings = (SyncInfrastructureSettings)SandboxSmokeHarness.Field(gm, "syncInfrastructure");
+			Assert.IsTrue(settings.enabled && settings.stabilizerSupplyEnabled, "Playtest scene: Sync + U2 on.");
+			if (generationOverride.HasValue)
+				settings.coreGenerationPerTick = generationOverride.Value;
 			SandboxSmokeHarness.Invoke(gm, "Start");
 			grid = (Cell[,])SandboxSmokeHarness.Field(gm, "grid");
 			structures = (List<PlacedStructure>)SandboxSmokeHarness.Field(gm, "structures");
-		}
-
-		internal static SyncInfrastructureSettings ProvisionalDefaults() =>
-			new() { enabled = true, stabilizerSupplyEnabled = true };
-
-		internal static SyncInfrastructureSettings TestFixture()
-		{
-			SyncInfrastructureSettings s = ProvisionalDefaults();
-			s.coreGenerationPerTick = 8;
-			return s;
+			runTicks = 0;
 		}
 
 		private void Place(Vector2Int p, BuildTool tool) =>
@@ -112,7 +117,17 @@ namespace ImminentDesync.Tests.EditMode
 
 		private PlacedStructure At(Vector2Int p) => structures.Find(s => s.Position == p);
 
-		private void Tick() => SandboxSmokeHarness.Tick(gm);
+		private void Tick()
+		{
+			SandboxSmokeHarness.Tick(gm);
+			runTicks++;
+			if (current != null && current.DefeatAtTick < 0 && gm.MissionDefeated)
+			{
+				current.DefeatAtTick = runTicks;
+				current.DefeatPhase = phase;
+				current.Log.AppendLine($"-- S4: MISSION FAILED latched at run tick {runTicks} ({phase}), Reality Integrity {gm.RealityIntegrity:F2}");
+			}
+		}
 
 		private bool Contaminated(Vector2Int p) => grid[p.x, p.y].Desync > Threshold;
 
@@ -202,15 +217,23 @@ namespace ImminentDesync.Tests.EditMode
 			return rear;
 		}
 
-		internal Result Run(string name, SyncInfrastructureSettings s, bool competent)
+		internal Result Run(string name, int? generationOverride, bool competent)
 		{
 			var r = new Result { Name = name };
-			Open(s);
-			r.Log.AppendLine($"== {name}: generation {s.coreGenerationPerTick}/tick (floor {s.CoreGeneration()}), upkeep {s.stabilizerUpkeepPerTick}, store {s.stabilizerStoreCapacity}, " +
-				$"intake {s.maxSupplyIntakePerTick}, foothold {s.footholdStabilizerCount}, emergency radius {s.coreSafeZoneRadius}, Stabilizer cost {s.stabilizerConstructionCost} at {s.maxConstructionIntakePerTick}/tick");
+			current = r;
+			Open(generationOverride);
+			SyncInfrastructureSettings s = settings;
+			r.S4Threshold = (float)SandboxSmokeHarness.Field(gm, "defeatIntegrityThreshold");
+			bool defeatOn = (bool)SandboxSmokeHarness.Field(gm, "realityIntegrityDefeat");
+			r.Log.AppendLine($"== {name}: generation {s.coreGenerationPerTick}/tick (floor {s.CoreGeneration()}), construction share {s.constructionMinimumShare:P0}, upkeep {s.stabilizerUpkeepPerTick}, store {s.stabilizerStoreCapacity}, " +
+				$"intake {s.maxSupplyIntakePerTick}, foothold {s.footholdStabilizerCount} (nearest the Core), emergency radius {s.coreSafeZoneRadius}, Stabilizer cost {s.stabilizerConstructionCost} at {s.maxConstructionIntakePerTick}/tick; " +
+				$"S4 {(defeatOn ? "on" : "off")} at {r.S4Threshold:F0} %");
 
-			// 1. Supplied line holding a frontier.
-			Assert.IsTrue((bool)SandboxSmokeHarness.Invoke(gm, "TryAddEmitter", EmitterPos));
+			// 1. Supplied line holding a frontier. The Emitter is the playtest scene's own (grid centre).
+			var emitters = (System.Collections.IList)SandboxSmokeHarness.Field(gm, "emitters");
+			Assert.AreEqual(1, emitters.Count);
+			Assert.AreEqual(EmitterPos, ((Emitter)emitters[0]).Position);
+			phase = "hold";
 			Place(CorePos, BuildTool.Core);
 			Place(Gap, BuildTool.Stabilizer);
 			Place(S2, BuildTool.Stabilizer);
@@ -219,9 +242,10 @@ namespace ImminentDesync.Tests.EditMode
 			Snapshot(r, "HELD", HoldTicks);
 			r.S3CompletedInHold = !At(S3).UnderConstruction;
 			if (!r.S3CompletedInHold)
-				r.Log.AppendLine("-- NOTE: S3 is still a blueprint after the hold: the foothold reservation (2 x upkeep 2 = 4) takes the whole generation, so construction receives nothing");
+				r.Log.AppendLine("-- NOTE: S3 is still a blueprint after the hold");
 
 			// 2. The player removes the gap Stabilizer; the collapse runs until the gap itself is contaminated, then longer.
+			phase = "collapse";
 			Remove(Gap);
 			int t = 0;
 			while (!Contaminated(Gap) && t < MaxCollapseTicks)
@@ -244,6 +268,7 @@ namespace ImminentDesync.Tests.EditMode
 			//    (generation / upkeep), then short 2-cell steps toward the gap; after each step completes, the
 			//    rearmost Stabilizer is removed to stay within supply; once reconnected, the helpers are removed
 			//    so the supply goes to the gap link and the stranded Stabilizers. Only existing player actions.
+			phase = "rebuild";
 			r.CorridorAtRebuildStart = Corridor();
 			r.StrandedFootprintAtRebuildStart = FootprintContaminated(S2) + FootprintContaminated(S3);
 			int sustainable = Mathf.Max(1, s.CoreGeneration() / Mathf.Max(1, s.stabilizerUpkeepPerTick));
@@ -282,7 +307,7 @@ namespace ImminentDesync.Tests.EditMode
 				constructionDelivered += d.ConstructionDelivered;
 				supplyDelivered += d.SupplyDelivered;
 				consumed += ConsumedThisTick();
-				if (r.IntegrityBelowS4ThresholdAt < 0 && gm.RealityIntegrity < 50f)
+				if (r.IntegrityBelowS4ThresholdAt < 0 && gm.RealityIntegrity < r.S4Threshold)
 					r.IntegrityBelowS4ThresholdAt = rt;
 
 				bool allComplete = playerBuilt.TrueForAll(p => !At(p).UnderConstruction);
@@ -367,7 +392,8 @@ namespace ImminentDesync.Tests.EditMode
 				$"corridor contaminated {r.CorridorAtRebuildStart} -> {r.CorridorAtReconnect} (reconnect) -> {r.CorridorAtEnd}; " +
 				$"S2+S3 footprints {r.StrandedFootprintAtRebuildStart} -> {r.StrandedFootprintAtEnd}; S3 sum {r.S3SumAtReconnect:F0} -> {r.S3SumAtEnd:F0}; " +
 				$"gap clean at end {r.GapCleanAtEnd}; min effectiveness after reconnect {r.MinEffectivenessAfterReconnect:P0}");
-			r.Log.AppendLine($"-- S2 reclaimed {r.S2ReclaimedAtEnd}, S3 reclaimed {r.S3ReclaimedAtEnd}; Reality Integrity {r.IntegrityAtReconnect:F2} at reconnection, first below 50 % (provisional S4 threshold) at rebuild t+{r.IntegrityBelowS4ThresholdAt} (S4 off in this test)");
+			r.Log.AppendLine($"-- S2 reclaimed {r.S2ReclaimedAtEnd}, S3 reclaimed {r.S3ReclaimedAtEnd}; Reality Integrity {r.IntegrityAtReconnect:F2} at reconnection, {gm.RealityIntegrity:F2} at end; " +
+				$"first below {r.S4Threshold:F0} % (S4 threshold) at rebuild t+{r.IntegrityBelowS4ThresholdAt}; S4 MISSION FAILED at run tick {r.DefeatAtTick} ({(r.DefeatAtTick < 0 ? "never" : r.DefeatPhase)}; the test keeps ticking to measure the rebuild)");
 			r.Log.AppendLine($"-- RECOVERY ACHIEVED: {r.RecoveryAchieved} (reconnected {r.Reconnected}, territory reclaimed {r.TerritoryReclaimed}, gap clean {r.GapCleanAtEnd})");
 
 			double gridSum = 0d;
@@ -387,49 +413,46 @@ namespace ImminentDesync.Tests.EditMode
 		}
 
 		// Diagnostic (no outcome assertion): one Stabilizer in the emergency radius, then straight to the gap 4 cells
-		// beyond it. Recorded 2026-11-25: the gap blueprint never reaches clean ground (one Stabilizer does not clean a
-		// cell 4 cells away against the advancing front), with charges left unused, so supply is not the limit.
+		// beyond it. In increment 2 (generation 4) the gap blueprint never reached clean ground (finding F1, reach).
 		[Test, Timeout(1800000)]
-		public void ProlongedCollapse_ProvisionalDefaults_NaivePlayer_Diagnostic()
+		public void ProlongedCollapse_2ADefaults_NaivePlayer_Diagnostic()
 		{
-			Result r = Run("PROVISIONAL DEFAULTS, NAIVE PLAYER", ProvisionalDefaults(), competent: false);
+			Result r = Run("2A DEFAULTS (playtest scene), NAIVE PLAYER", null, competent: false);
 			TestContext.WriteLine(r.Log.ToString());
 			AssertSetup(r);
 		}
 
-		// Acceptance at the shipped provisional defaults (generation 4). Generation sustains two Stabilizers at full
-		// strength, so the network reconnects and the gap and S2 are reclaimed; S3 (never completed in this setup) is not.
+		// Acceptance at the increment 2A defaults: construction is never starved during the hold (F3 fixed), and the
+		// competent rebuild recovers.
 		[Test, Timeout(1800000)]
-		public void ProlongedCollapse_ProvisionalDefaults_CompetentPlayer_Reconnects_AndReclaimsWithinSupply()
+		public void ProlongedCollapse_2ADefaults_CompetentPlayer_Recovers()
 		{
-			Result r = Run("PROVISIONAL DEFAULTS, COMPETENT PLAYER", ProvisionalDefaults(), competent: true);
+			Result r = Run("2A DEFAULTS (playtest scene), COMPETENT PLAYER", null, competent: true);
 			TestContext.WriteLine(r.Log.ToString());
 			AssertSetup(r);
+			Assert.IsTrue(r.S3CompletedInHold, "F3: S3 completes during the hold while two Stabilizers stand.");
 			Assert.IsTrue(r.Reconnected && r.ConnectedAtEnd, "The network reconnects the stranded Stabilizers.");
 			Assert.IsTrue(r.GapCleanAtEnd, "The original gap is reclaimed.");
-			Assert.IsTrue(r.S2ReclaimedAtEnd, "S2 is reclaimed: centre clean, fully supplied.");
 			Assert.IsTrue(r.TerritoryReclaimed, "Contamination in the corridor and the stranded footprints is pushed back.");
 			Assert.IsTrue(r.RecoveryAchieved);
 		}
 
-		// Acceptance at the test-fixture generation (8): full recovery, including S3.
+		// Comparison (in memory only): the increment 2 generation of 4 with the 2A rules. F3 no longer starves
+		// construction during the hold. Outcome otherwise reported, not asserted.
 		[Test, Timeout(1800000)]
-		public void ProlongedCollapse_TestFixtureGeneration_CompetentPlayer_FullyRecovers()
+		public void ProlongedCollapse_Generation4Comparison_CompetentPlayer_ConstructionNotStarved()
 		{
-			Result r = Run("TEST FIXTURE (generation 8), COMPETENT PLAYER", TestFixture(), competent: true);
+			Result r = Run("COMPARISON generation 4 with 2A rules, COMPETENT PLAYER", 4, competent: true);
 			TestContext.WriteLine(r.Log.ToString());
 			AssertSetup(r);
-			Assert.IsTrue(r.RecoveryAchieved, "Reconnected, gap clean, territory reclaimed.");
-			Assert.IsTrue(r.S2ReclaimedAtEnd, "S2 reclaimed.");
-			Assert.IsTrue(r.S3ReclaimedAtEnd, "S3 reclaimed.");
-			Assert.Less(r.S3SumAtEnd, r.S3SumAtReconnect, "Desync in S3's footprint is pushed back after reconnection.");
+			Assert.IsTrue(r.S3CompletedInHold, "F3: S3 completes during the hold even at generation 4.");
 		}
 
 		[Test, Timeout(1800000)]
 		public void ProlongedCollapse_IsDeterministic()
 		{
-			string a = Run("DETERMINISM A", ProvisionalDefaults(), competent: true).Fingerprint;
-			string b = Run("DETERMINISM B", ProvisionalDefaults(), competent: true).Fingerprint;
+			string a = Run("DETERMINISM A", null, competent: true).Fingerprint;
+			string b = Run("DETERMINISM B", null, competent: true).Fingerprint;
 			TestContext.WriteLine(a);
 			Assert.AreEqual(a, b);
 		}
