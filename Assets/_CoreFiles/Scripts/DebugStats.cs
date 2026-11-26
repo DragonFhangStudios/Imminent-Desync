@@ -79,4 +79,15 @@ public struct DebugStats
 	public int blueprintsReconstructing;
 	public int blueprintsCompleted;
 	public string hoveredConstructionText;
+
+	// U2 Stabilizer supply and S4 defeat (increment 2, opt-in). Empty while they are disabled.
+	public bool supplyEnabled;
+	public int supplyDemand;
+	public int supplyDelivered;
+	public int stabilizersSupplied;
+	public int stabilizersOnStore;
+	public int stabilizersReduced;
+	public int stabilizersStarved;
+	public int storedCharges;
+	public bool missionDefeated;
 }

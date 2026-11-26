@@ -53,6 +53,15 @@ public class GridManager : MonoBehaviour
 	[Tooltip("Sync Charge generation and blueprint Reconstruction. Off by default: the Sandbox keeps instant, free building. All numbers are provisional test values.")]
 	private SyncInfrastructureSettings syncInfrastructure = new();
 
+	[Header("Reality Integrity defeat (D1 / S4, increment 2, opt-in)")]
+	[SerializeField]
+	[Tooltip("Opt-in. On: the mission fails (simulation pauses) when Reality Integrity falls below the threshold. Off = no failure state, as in the Sandbox.")]
+	private bool realityIntegrityDefeat = false;
+
+	[SerializeField, Range(0f, 100f)]
+	[Tooltip("PROVISIONAL test value (D1: configurable, provisional until playtest; increment 2A: 30, was 50). Defeat below this Reality Integrity, in percent.")]
+	private float defeatIntegrityThreshold = 30f;
+
 	[Header("Containment Condition (experiment)")]
 	[SerializeField]
 	[Tooltip("On: Containment Status describes the containment network (worst operational Stabilizer). Off: legacy status from world-wide Reality Integrity.")]
@@ -196,8 +205,19 @@ public class GridManager : MonoBehaviour
 	public bool SyncInfrastructureEnabled => syncInfrastructure != null && syncInfrastructure.enabled;
 	public SyncDiagnostics SyncDiagnostics => syncDiagnostics;
 
+	// Increment 2A debug overlay (backquote key). Not serialized: always starts hidden.
+	private bool syncDebugOverlayVisible;
+	private GUIStyle syncDebugOverlayStyle;
+	public bool SyncDebugOverlayVisible => syncDebugOverlayVisible;
+	public string SyncDebugOverlayText => SyncDebugOverlay.Build(
+		syncInfrastructure, syncDiagnostics, structures, realityIntegrity,
+		realityIntegrityDefeat, defeatIntegrityThreshold, MissionDefeated, simulationTicks);
+
 	// Primary completion hook: true once every Emitter has been reduced to zero.
 	public bool PrimaryObjectiveComplete { get; private set; }
+
+	// Defeat latch (D1 / S4, opt-in): true once Reality Integrity fell below the threshold.
+	public bool MissionDefeated { get; private set; }
 
 	private float timer;
 	private float realityIntegrity;
@@ -279,6 +299,38 @@ public class GridManager : MonoBehaviour
 		}
 
 		HandleToolSelection();
+
+		if (Keyboard.current.backquoteKey.wasPressedThisFrame)
+		{
+			syncDebugOverlayVisible = !syncDebugOverlayVisible;
+		}
+	}
+
+	// Text-only Sync debug overlay (increment 2A). Hidden until toggled with the backquote key; reads
+	// simulation state only and changes nothing.
+	private void OnGUI()
+	{
+		if (!syncDebugOverlayVisible)
+			return;
+
+		string text = SyncDebugOverlay.Build(
+			syncInfrastructure, syncDiagnostics, structures, realityIntegrity,
+			realityIntegrityDefeat, defeatIntegrityThreshold, MissionDefeated, simulationTicks);
+
+		if (syncDebugOverlayStyle == null)
+		{
+			syncDebugOverlayStyle = new GUIStyle(GUI.skin.box)
+			{
+				alignment = TextAnchor.UpperLeft,
+				fontSize = 13,
+				wordWrap = false,
+				richText = false,
+				padding = new RectOffset(8, 8, 6, 6)
+			};
+		}
+
+		Vector2 size = syncDebugOverlayStyle.CalcSize(new GUIContent(text));
+		GUI.Box(new Rect(Screen.width - size.x - 10f, 10f, size.x, size.y), text, syncDebugOverlayStyle);
 	}
 
 	// One simulation tick (also used for single-stepping while paused).
@@ -290,9 +342,31 @@ public class GridManager : MonoBehaviour
 		Simulate();
 		UpdateNullifiers();
 		CalculateIntegrity();
+		CheckRealityIntegrityDefeat();
 		CalculateActivity();
 		UpdateContainmentStatus();
 		RenderGrid();
+	}
+
+	// ----------------------------
+	// REALITY INTEGRITY DEFEAT (D1 / safeguard S4, increment 2, opt-in)
+	// ----------------------------
+
+	// Ends a truly collapsed mission instead of leaving the player stuck. Off by default (the Sandbox has
+	// no failure state). Never triggers after the objective is complete (victory comes first; D4's
+	// Continue keeps defeat disabled). The mission flow and its panels belong to a later increment:
+	// for now defeat latches MissionDefeated, pauses the simulation and logs once.
+	private void CheckRealityIntegrityDefeat()
+	{
+		if (!realityIntegrityDefeat || MissionDefeated || PrimaryObjectiveComplete)
+			return;
+
+		if (realityIntegrity >= defeatIntegrityThreshold)
+			return;
+
+		MissionDefeated = true;
+		isPaused = true;
+		Debug.Log($"Mission failed: Reality Integrity {realityIntegrity:F1}% fell below {defeatIntegrityThreshold:F1}%.");
 	}
 
 	// ----------------------------
@@ -785,7 +859,9 @@ public class GridManager : MonoBehaviour
 					1f -
 					(distance / radius);
 
-				float stabilizationAmount =	node.Strength * falloff;
+				// U2 (opt-in): scaled by supply effectiveness. It is exactly 1 while U2 is off,
+				// and Strength * 1 is exact, so the result is unchanged.
+				float stabilizationAmount =	node.Strength * node.SupplyEffectiveness * falloff;
 
 				grid[targetX, targetY]
 					.Stabilization +=
@@ -1187,6 +1263,7 @@ public class GridManager : MonoBehaviour
 		stats.isPaused = isPaused;
 
 		stats.simulationTicks = simulationTicks;
+		stats.missionDefeated = MissionDefeated; // always false unless the opt-in defeat is on
 
 		if (SyncInfrastructureEnabled)
 		{
@@ -1210,6 +1287,15 @@ public class GridManager : MonoBehaviour
 		stats.blueprintsReconstructing = syncDiagnostics.Reconstructing;
 		stats.blueprintsCompleted = syncDiagnostics.TotalCompleted;
 
+		stats.supplyEnabled = syncInfrastructure.SupplyActive;
+		stats.supplyDemand = syncDiagnostics.SupplyDemand;
+		stats.supplyDelivered = syncDiagnostics.SupplyDelivered;
+		stats.stabilizersSupplied = syncDiagnostics.StabilizersSupplied;
+		stats.stabilizersOnStore = syncDiagnostics.StabilizersOnStore;
+		stats.stabilizersReduced = syncDiagnostics.StabilizersReduced;
+		stats.stabilizersStarved = syncDiagnostics.StabilizersStarved;
+		stats.storedCharges = syncDiagnostics.StoredCharges;
+
 		stats.hoveredConstructionText = "";
 
 		foreach (var structure in structures)
@@ -1217,9 +1303,22 @@ public class GridManager : MonoBehaviour
 			if (structure.Position.x != hoveredX || structure.Position.y != hoveredY)
 				continue;
 
-			stats.hoveredConstructionText = structure.UnderConstruction
-				? $"{structure.Type} blueprint {structure.ChargesDelivered}/{structure.ChargesRequired} ({structure.Construction})"
-				: $"{structure.Type} (operational)";
+			if (structure.UnderConstruction)
+			{
+				stats.hoveredConstructionText =
+					$"{structure.Type} blueprint {structure.ChargesDelivered}/{structure.ChargesRequired} ({structure.Construction})";
+			}
+			else if (SyncInfrastructure.IsSuppliedStabilizer(structure, syncInfrastructure))
+			{
+				stats.hoveredConstructionText =
+					$"Stabilizer {structure.Supply}, effectiveness {structure.SupplyEffectiveness:P0}, store {structure.StoredCharges}/{syncInfrastructure.stabilizerStoreCapacity}" +
+					(structure.IsConnected ? "" : ", DISCONNECTED");
+			}
+			else
+			{
+				stats.hoveredConstructionText = $"{structure.Type} (operational)";
+			}
+
 			break;
 		}
 	}
@@ -1346,7 +1445,10 @@ public class GridManager : MonoBehaviour
 		{
 			if (structure.Node != null)
 			{
-				structure.Node.IsActive = structure.IsConnected && !structure.UnderConstruction;
+				// With U2 supply on, a completed Stabilizer stays active when disconnected: it runs on
+				// its store (S3) and its supply effectiveness, not the connection, decides its strength.
+				bool supplied = syncInfrastructure != null && syncInfrastructure.SupplyActive;
+				structure.Node.IsActive = !structure.UnderConstruction && (structure.IsConnected || supplied);
 			}
 		}
 
@@ -1529,7 +1631,11 @@ public class GridManager : MonoBehaviour
 
 			case StructureType.Stabilizer:
 
-				if (!structure.IsConnected)
+				// With U2 supply on (opt-in), grey means starved (zero stabilization), not disconnected:
+				// a disconnected Stabilizer keeps working on its store until it runs out.
+				bool supplyActive = syncInfrastructure != null && syncInfrastructure.SupplyActive;
+
+				if (supplyActive ? structure.Supply == SupplyStatus.Starved : !structure.IsConnected)
 					return InactiveMarkerColor;
 
 				switch (structure.Node != null ? structure.Node.Condition : ContainmentCondition.Normal)

@@ -83,7 +83,7 @@ and no new mechanics beyond the approved ones.
 - Players must protect infrastructure and keep supply connections intact. Severing a critical connection can cut supply
   downstream and let Desync spread again.
 - [Tuning] Generation rate, consumption rate, per-Stabilizer storage, and the curve from supply to effectiveness.
-- Implementation belongs to roadmap increment 2 (not authorized yet).
+- Implemented (opt-in) in roadmap increment 2, authorized 2026-11-25. The tuning above is still open.
 
 ### 4.3 Sync Charge allocation [Approved]: record Option A
 
@@ -112,7 +112,7 @@ and no new mechanics beyond the approved ones.
 > reconfiguration pulses. No other resource or building is required."
 
 - [Open] Stage conditions, durations, effects, redundancy behavior and charge costs.
-- Implementation belongs to roadmap increment 3 (not authorized yet).
+- Implementation belongs to roadmap increment 3, which was authorized on 2026-11-25 (§6). Its plan is still to be approved.
 
 ### 4.6 Emitter lifecycle and victory [Approved]: record N4
 
@@ -155,7 +155,7 @@ centre cell, and the scripted players avoided dense Desync.
 | Gate | Status |
 |---|---|
 | A — import and compile | Passed |
-| B — interactive Sandbox playtest by the Director | **Pending** |
+| B — interactive Sandbox playtest by the Director | **Passed** (2026-11-25, Director) |
 | C — The Basin feasibility research | Complete; historical (previous gameplay model) |
 | D — The Basin implementation | **Not authorized** |
 | E — end-to-end validation | Future |
@@ -165,18 +165,51 @@ infrastructure, Sync Charge generation and distribution, blueprint Reconstructio
 opt-in infrastructure development. This does not authorize Gate D, The Basin, or later increments. Manual verification
 that has not been performed is not marked as passed.
 
+**2026-11-25:** the Director approved safeguards S1–S4 and authorized roadmap increment 2 (U2 Stabilizer supply, the
+effectiveness curve, starvation and the recovery safeguards). Supply tuning (Part 4 item 6) is still undecided.
+Increment 3 onward, Gate D and The Basin remain unauthorized.
+
+**Gate B passed (2026-11-25):** the Director played the Sandbox in the Unity Editor and declared Gate B passed
+("B passed"). Passing Gate B approves nothing else. Supply tuning is unchanged, and the increment 2 pull request is
+not merged.
+
+**Increment 3 authorized (2026-11-25):** directly after Gate B, the Director authorized roadmap increment 3
+("Approve increment 3"): Nullifier reconfiguration N1–N3 with amendment N1-A (§4.5). Decision 2 (stage conditions,
+durations, effects, redundancy and charge costs) remains open, so its values will be provisional. Gate D, The Basin,
+increment 4 onward (including N4 and the recovery mathematics) and supply-tuning changes remain unauthorized.
+
+**Increment 2A authorized (2026-11-26):** the Director authorized "Increment 2A: Playability Pass" to fix the
+increment 2 findings and make Reconstruction and U2 playable by hand. Scope: F3 (construction never fully starves:
+a minimum share of generation, provisionally 25 %, reserved for construction after the foothold's upkeep); F4 (the
+foothold chosen by distance to the Sync Core, not placement order); provisional tuning (generation 8 per tick, S4
+defeat at 30 % Reality Integrity); a Sandbox-style playtest scene with Sync Charges, Reconstruction and U2 on, which
+starts with an Emitter placed (Director: so the manual and automated tests start the same way); a text-only debug
+overlay; re-runs; a one-page report and a five-item manual checklist. The plan was approved the same day. All values
+remain provisional; decision 5 stays open beyond these values. `Sandbox.unity` is unchanged. Increment 3 remains
+approved and implemented, with publication held until 2A validation and the integration review are complete.
+Increment 4 onward, Gate D and The Basin remain unauthorized. Details: `SYNC_INFRASTRUCTURE.md` §8.6.
+
 ## 7. Open Director decisions
 
 1. Recovery mathematics after reconfiguration (post-victory decay, Restoration strength, radius and duration, or a combination).
 2. Nullifier details: readiness conditions, stage durations and effects, redundancy behavior, charge costs.
-3. Recovery safeguards S1–S4 (proposals): S1 the Sync Core's surroundings always stay buildable; S2 generation always
-   covers the starting foothold's upkeep; S3 Stabilizers keep a small charge store; S4 Reality Integrity defeat ends a
-   truly collapsed mission.
+3. ~~Recovery safeguards S1–S4~~ — **[Approved] 2026-11-25** (Director: "Approve S1–S4 and start increment 2"):
+   S1 the Sync Core's surroundings always stay buildable; S2 generation always covers the starting foothold's upkeep;
+   S3 Stabilizers keep a small charge store; S4 Reality Integrity defeat ends a truly collapsed mission. Implemented in
+   increment 2 (see `Docs/SYNC_INFRASTRUCTURE.md` §8); their numbers remain provisional.
+   **S1 interpretation [Approved, provisional] 2026-11-25:** S1 is the Sync Core's emergency Reconstruction radius.
+   Construction is permitted on contaminated ground within it, without passive stabilization or immunity to Desync.
+   The three-cell radius stays configurable and provisional until playtesting. Future acceptance testing must include
+   a prolonged network collapse where the original gap becomes contaminated and the player rebuilds progressively from
+   the Sync Core; the test passes only if recovery is achievable (§8.5 there). Further balancing is deferred to
+   playtesting. The test was implemented and run on 2026-11-25. Recovery is achievable by progressive rebuilding, but
+   not with a single Stabilizer. At the shipped defaults it is only partial, and it raises supply-tuning findings
+   F1–F5 (`SYNC_INFRASTRUCTURE.md` §8.5.2). They are inputs to decision 5; nothing was changed.
 4. Reconstruction details: costs and build times; the behavior of blueprints waiting on contaminated ground.
 5. Supply tuning: generation, consumption, storage and the effectiveness curve.
 6. The December 20 Basin target: move it, reduce the scope, or a two-step plan.
 7. Scheduling of the comparative suppression playtest and of the replacement research study.
-8. Gate B completion and Gate D authorization.
+8. ~~Gate B completion~~ — **passed 2026-11-25** (§6). Gate D authorization is still open.
 9. Map-boundary behavior and natural decay remain open design and test decisions. `decayRate` stays.
 
 ## 8. Deferred features
