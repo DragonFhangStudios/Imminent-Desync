@@ -112,7 +112,7 @@ and no new mechanics beyond the approved ones.
 > reconfiguration pulses. No other resource or building is required."
 
 - [Open] Stage conditions, durations, effects, redundancy behavior and charge costs.
-- Implementation belongs to roadmap increment 3 (not authorized yet).
+- Implementation belongs to roadmap increment 3, which was authorized on 2026-11-25 (§6). Its plan is still to be approved.
 
 ### 4.6 Emitter lifecycle and victory [Approved]: record N4
 
@@ -170,8 +170,13 @@ effectiveness curve, starvation and the recovery safeguards). Supply tuning (Par
 Increment 3 onward, Gate D and The Basin remain unauthorized.
 
 **Gate B passed (2026-11-25):** the Director played the Sandbox in the Unity Editor and declared Gate B passed
-("B passed"). Passing Gate B approves nothing else. Gate D, The Basin and increment 3 onward remain unauthorized,
-supply tuning is unchanged, and the increment 2 pull request is not merged.
+("B passed"). Passing Gate B approves nothing else. Supply tuning is unchanged, and the increment 2 pull request is
+not merged.
+
+**Increment 3 authorized (2026-11-25):** directly after Gate B, the Director authorized roadmap increment 3
+("Approve increment 3"): Nullifier reconfiguration N1–N3 with amendment N1-A (§4.5). Decision 2 (stage conditions,
+durations, effects, redundancy and charge costs) remains open, so its values will be provisional. Gate D, The Basin,
+increment 4 onward (including N4 and the recovery mathematics) and supply-tuning changes remain unauthorized.
 
 ## 7. Open Director decisions
 
