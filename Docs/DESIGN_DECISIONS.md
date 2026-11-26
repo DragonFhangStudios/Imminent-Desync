@@ -155,7 +155,7 @@ centre cell, and the scripted players avoided dense Desync.
 | Gate | Status |
 |---|---|
 | A — import and compile | Passed |
-| B — interactive Sandbox playtest by the Director | **Pending** |
+| B — interactive Sandbox playtest by the Director | **Passed** (2026-11-25, Director) |
 | C — The Basin feasibility research | Complete; historical (previous gameplay model) |
 | D — The Basin implementation | **Not authorized** |
 | E — end-to-end validation | Future |
@@ -168,6 +168,10 @@ that has not been performed is not marked as passed.
 **2026-11-25:** the Director approved safeguards S1–S4 and authorized roadmap increment 2 (U2 Stabilizer supply, the
 effectiveness curve, starvation and the recovery safeguards). Supply tuning (Part 4 item 6) is still undecided.
 Increment 3 onward, Gate D and The Basin remain unauthorized.
+
+**Gate B passed (2026-11-25):** the Director played the Sandbox in the Unity Editor and declared Gate B passed
+("B passed"). Passing Gate B approves nothing else. Gate D, The Basin and increment 3 onward remain unauthorized,
+supply tuning is unchanged, and the increment 2 pull request is not merged.
 
 ## 7. Open Director decisions
 
@@ -189,7 +193,7 @@ Increment 3 onward, Gate D and The Basin remain unauthorized.
 5. Supply tuning: generation, consumption, storage and the effectiveness curve.
 6. The December 20 Basin target: move it, reduce the scope, or a two-step plan.
 7. Scheduling of the comparative suppression playtest and of the replacement research study.
-8. Gate B completion and Gate D authorization.
+8. ~~Gate B completion~~ — **passed 2026-11-25** (§6). Gate D authorization is still open.
 9. Map-boundary behavior and natural decay remain open design and test decisions. `decayRate` stays.
 
 ## 8. Deferred features

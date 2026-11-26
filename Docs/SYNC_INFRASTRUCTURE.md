@@ -1,7 +1,9 @@
 # Sync Infrastructure — Sync Charges, Reconstruction, Stabilizer supply and safeguards
 
-**Status:** roadmap increments 1 and 2 implemented, opt-in, verified by automated EditMode tests. **Not yet
-played by the Director** (Gate B is pending), so controls, presentation and feel are unverified.
+**Status:** roadmap increments 1 and 2 implemented, opt-in, verified by automated EditMode tests. Gate B (the
+Director's interactive Sandbox playtest) passed on 2026-11-25. No results have been reported yet from the separate
+increment 2 manual checklist, which plays these opt-in systems, so their controls, presentation and feel remain
+unverified.
 **Design reference:** `Docs/DESIGN_DECISIONS.md` §4.1 (D2-A Reconstruction), §4.2 (U2 supply), §4.3 (Option A
 allocation) and §7 item 3 (safeguards S1–S4, approved by the Director on 2026-11-25). Increment 2 (U2 supply and
 safeguards) is described in §8 below.
