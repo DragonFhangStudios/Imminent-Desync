@@ -2,9 +2,8 @@ using System.Collections.Generic;
 
 // Sync Charges, increment 1 (opt-in). Pure C#: no Unity objects, no frame time, no randomness.
 //
-// Consumer categories for automatic allocation (Option A). Only Construction has consumers in
-// increment 1. StabilizerSupply (U2) and NullifierOperation (N1-A) are reserved for later increments,
-// so the allocator already handles several categories.
+// Consumer categories for automatic allocation (Option A): Construction (increment 1), StabilizerSupply
+// (U2, increment 2) and NullifierOperation (N1-A, increment 3). Each is used only while its opt-in is on.
 public enum SyncChargeCategory
 {
 	Construction = 0,

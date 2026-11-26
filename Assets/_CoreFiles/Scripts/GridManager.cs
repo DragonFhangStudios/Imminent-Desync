@@ -164,6 +164,8 @@ public class GridManager : MonoBehaviour
 	private static readonly Color CoreMarkerColor = new(1.00f, 1.00f, 1.00f, 1.00f);
 	private static readonly Color StabilizerActiveMarkerColor = new(0.60f, 1.00f, 0.60f, 1.00f);
 	private static readonly Color NullifierActiveMarkerColor = new(0.75f, 0.50f, 1.00f, 1.00f);
+	private static readonly Color NullifierPreparingMarkerColor = new(0.45f, 0.30f, 0.65f, 1.00f);
+	private static readonly Color NullifierReadyMarkerColor = new(0.92f, 0.82f, 1.00f, 1.00f);
 	private static readonly Color InactiveMarkerColor = new(0.35f, 0.35f, 0.35f, 1.00f);
 	private static readonly Color BlueprintWaitingMarkerColor = new(0.25f, 0.45f, 0.85f, 0.70f);
 	private static readonly Color BlueprintBuildingMarkerColor = new(0.40f, 0.75f, 1.00f, 1.00f);
@@ -291,6 +293,7 @@ public class GridManager : MonoBehaviour
 		}
 
 		HandleToolSelection();
+		HandleReconfigurationCommand();
 	}
 
 	// One simulation tick (also used for single-stepping while paused).
@@ -340,7 +343,9 @@ public class GridManager : MonoBehaviour
 		if (!SyncInfrastructureEnabled)
 			return;
 
-		bool completed = SyncInfrastructure.Step(structures, IsCleanGround, syncInfrastructure, syncDiagnostics);
+		bool completed = SyncInfrastructure.Step(
+			structures, IsCleanGround, syncInfrastructure, syncDiagnostics,
+			structure => FindNullifierTarget(structure.Position) != null);
 
 		if (completed)
 		{
@@ -1268,6 +1273,12 @@ public class GridManager : MonoBehaviour
 				stats.hoveredConstructionText =
 					$"{structure.Type} blueprint {structure.ChargesDelivered}/{structure.ChargesRequired} ({structure.Construction})";
 			}
+			else if (NullifierReconfiguration.IsOperationalNullifier(structure, syncInfrastructure))
+			{
+				stats.hoveredConstructionText =
+					$"Nullifier {structure.NullifierState}, pulse store {structure.StoredCharges}/{syncInfrastructure.nullifierPulseCost}" +
+					(structure.NullifierState == NullifierStatus.Ready ? " (press N to initiate)" : "");
+			}
 			else if (SyncInfrastructure.IsSuppliedStabilizer(structure, syncInfrastructure))
 			{
 				stats.hoveredConstructionText =
@@ -1281,6 +1292,49 @@ public class GridManager : MonoBehaviour
 
 			break;
 		}
+
+		// Nullifier reconfiguration (increment 3, opt-in).
+		if (!ReconfigurationActive)
+			return;
+
+		stats.reconfigurationEnabled = true;
+		stats.nullifiersPreparing = syncDiagnostics.NullifiersPreparing;
+		stats.nullifiersReady = syncDiagnostics.NullifiersReady;
+		stats.nullifiersEngaged = syncDiagnostics.NullifiersEngaged;
+		stats.nullifiersInactive = syncDiagnostics.NullifiersInactive;
+		stats.nullifierDemand = syncDiagnostics.NullifierDemand;
+		stats.nullifierDelivered = syncDiagnostics.NullifierDelivered;
+		stats.reconfigurationText = "";
+
+		foreach (var emitter in emitters)
+		{
+			string text = DescribeReconfiguration(emitter);
+
+			if (emitter.Position.x == hoveredX && emitter.Position.y == hoveredY)
+				stats.hoveredConstructionText = $"Emitter: {text}";
+
+			// The HUD line follows the first Emitter whose sequence has started.
+			if (emitter.ReconfigurationStarted && string.IsNullOrEmpty(stats.reconfigurationText))
+				stats.reconfigurationText = text;
+		}
+
+		if (string.IsNullOrEmpty(stats.reconfigurationText) && syncDiagnostics.NullifiersReady > 0)
+			stats.reconfigurationText = "Nullifier Ready: press N to initiate";
+	}
+
+	private string DescribeReconfiguration(Emitter emitter)
+	{
+		if (emitter.IsReconfigured)
+			return "reconfigured";
+
+		if (!emitter.ReconfigurationStarted)
+			return "not initiated";
+
+		string stage = NullifierReconfiguration.CurrentStageName(emitter.CompletedStages);
+
+		return $"stage {emitter.CompletedStages + 1}/{NullifierReconfiguration.StageCount} {stage} " +
+			$"{emitter.StageProgress}/{syncInfrastructure.reconfigurationStageTicks}" +
+			(emitter.AwaitingPulse ? " (waiting for a full pulse store)" : "");
 	}
 
 	private bool CanPlaceStructure(int x, int y)
@@ -1419,8 +1473,19 @@ public class GridManager : MonoBehaviour
 	// NULLIFIER
 	// ----------------------------
 
+	private bool ReconfigurationActive => syncInfrastructure != null && syncInfrastructure.ReconfigurationActive;
+
 	private void UpdateNullifiers()
 	{
+		// Increment 3 (opt-in): staged reconfiguration replaces the drain. Off = the drain below, unchanged.
+		if (ReconfigurationActive)
+		{
+			NullifierReconfiguration.Step(structures, emitters, FindNullifierTarget, syncInfrastructure, syncDiagnostics);
+			UpdateObjectiveState();
+			RefreshStructureMarkers();
+			return;
+		}
+
 		foreach (var structure in structures)
 		{
 			if (structure.Type != StructureType.Nullifier || !structure.IsConnected || structure.UnderConstruction)
@@ -1437,6 +1502,47 @@ public class GridManager : MonoBehaviour
 
 		UpdateObjectiveState();
 		RefreshStructureMarkers();
+	}
+
+	// N1 manual initiation (increment 3, opt-in): from the Ready Nullifier nearest the given cell.
+	// A simulation command, separate from the key that triggers it. Returns false if none is Ready.
+	private bool TryInitiateReconfiguration(Vector2Int near)
+	{
+		if (!ReconfigurationActive)
+			return false;
+
+		PlacedStructure best = null;
+		float bestDistanceSq = float.MaxValue;
+
+		foreach (var structure in structures)
+		{
+			if (structure.Type != StructureType.Nullifier ||
+				NullifierReconfiguration.EvaluateStatus(structure, FindNullifierTarget, syncInfrastructure) != NullifierStatus.Ready)
+				continue;
+
+			float distanceSq = (structure.Position - near).sqrMagnitude;
+
+			if (distanceSq < bestDistanceSq)
+			{
+				bestDistanceSq = distanceSq;
+				best = structure;
+			}
+		}
+
+		if (!NullifierReconfiguration.TryInitiate(best, FindNullifierTarget, syncInfrastructure))
+			return false;
+
+		Debug.Log($"Reconfiguration initiated from the Nullifier at ({best.Position.x}, {best.Position.y}).");
+		RefreshStructureMarkers();
+		return true;
+	}
+
+	private void HandleReconfigurationCommand()
+	{
+		if (ReconfigurationActive && Keyboard.current.nKey.wasPressedThisFrame)
+		{
+			TryInitiateReconfiguration(new Vector2Int(hoveredX, hoveredY));
+		}
 	}
 
 	// Nearest active Emitter within nullifierRange, or null.
@@ -1607,6 +1713,19 @@ public class GridManager : MonoBehaviour
 				}
 
 			case StructureType.Nullifier:
+
+				// Increment 3 (opt-in): dim violet = preparing, pale violet (pulsing) = Ready, violet = engaged.
+				if (ReconfigurationActive)
+				{
+					switch (structure.NullifierState)
+					{
+						case NullifierStatus.Preparing: return NullifierPreparingMarkerColor;
+						case NullifierStatus.Ready: return NullifierReadyMarkerColor;
+						case NullifierStatus.Engaged: return NullifierActiveMarkerColor;
+						default: return InactiveMarkerColor;
+					}
+				}
+
 				return structure.IsConnected && FindNullifierTarget(structure.Position) != null
 					? NullifierActiveMarkerColor
 					: InactiveMarkerColor;
@@ -1621,7 +1740,21 @@ public class GridManager : MonoBehaviour
 	{
 		foreach (var structure in structures)
 		{
-			if (structure.Marker == null || structure.Type != StructureType.Stabilizer)
+			if (structure.Marker == null)
+				continue;
+
+			// Increment 3 (opt-in): a Ready Nullifier pulses until the player initiates.
+			if (structure.Type == StructureType.Nullifier && ReconfigurationActive)
+			{
+				float readyPulse = structure.NullifierState == NullifierStatus.Ready
+					? 0.2f * Mathf.Sin(Time.time * Mathf.PI * 2f)
+					: 0f;
+
+				structure.Marker.transform.localScale = structureMarkerScale * (1f + readyPulse);
+				continue;
+			}
+
+			if (structure.Type != StructureType.Stabilizer)
 				continue;
 
 			ContainmentCondition condition =

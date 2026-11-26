@@ -112,7 +112,9 @@ and no new mechanics beyond the approved ones.
 > reconfiguration pulses. No other resource or building is required."
 
 - [Open] Stage conditions, durations, effects, redundancy behavior and charge costs.
-- Implementation belongs to roadmap increment 3, which was authorized on 2026-11-25 (§6). Its plan is still to be approved.
+- Implementation belongs to roadmap increment 3, which was authorized on 2026-11-25 (§6). Its plan was approved the same
+  day and it is implemented opt-in, with provisional values and choices C1–C10 (`Docs/SYNC_INFRASTRUCTURE.md` §9).
+  The open details above are unchanged.
 
 ### 4.6 Emitter lifecycle and victory [Approved]: record N4
 

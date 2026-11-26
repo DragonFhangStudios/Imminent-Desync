@@ -90,4 +90,14 @@ public struct DebugStats
 	public int stabilizersStarved;
 	public int storedCharges;
 	public bool missionDefeated;
+
+	// Nullifier reconfiguration (increment 3, opt-in). Empty while it is disabled.
+	public bool reconfigurationEnabled;
+	public int nullifiersPreparing;
+	public int nullifiersReady;
+	public int nullifiersEngaged;
+	public int nullifiersInactive;
+	public int nullifierDemand;
+	public int nullifierDelivered;
+	public string reconfigurationText;
 }

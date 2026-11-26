@@ -30,9 +30,13 @@ public class PlacedStructure
 
 	// U2 Stabilizer supply (increment 2, opt-in). Untouched while U2 supply is off,
 	// so effectiveness stays 1 and Stabilizers behave as before.
+	// StoredCharges is also a completed Nullifier's pulse store while reconfiguration (increment 3) is on.
 	public int StoredCharges;
 	public float SupplyEffectiveness = 1f;
 	public SupplyStatus Supply = SupplyStatus.NotApplicable;
+
+	// Nullifier reconfiguration (increment 3, opt-in). NotApplicable while it is off.
+	public NullifierStatus NullifierState = NullifierStatus.NotApplicable;
 
 	public PlacedStructure(StructureType type, Vector2Int position)
 	{
