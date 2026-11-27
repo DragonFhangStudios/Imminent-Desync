@@ -13,6 +13,7 @@ Controls marked **(sandbox)** only work while **Sandbox Debug Controls** is enab
 |---|---|
 | **Space** | Pause / resume the simulation. |
 | **. (Period)** | While paused: advance exactly one tick. |
+| **N** | Nullifier reconfiguration (opt-in, increment 3): initiate the sequence from the **Ready** Nullifier nearest the cursor. Does nothing while the opt-in is off. |
 | **` (Backquote)** | Show / hide the text-only **Sync debug overlay** (top right): charges generated / delivered / unused, construction share and foothold reservations, upkeep, each blueprint's progress, each Stabilizer's effectiveness and store (`[foothold]` marks the foothold), Reality Integrity and the S4 threshold. Read-only; starts hidden. (Increment 2A.) |
 
 ## Build Tool
@@ -35,6 +36,7 @@ Controls marked **(sandbox)** only work while **Sandbox Debug Controls** is enab
 | 🟥 Red | Invalid (cell occupied, second Core, or tool unavailable). |
 
 **Structure markers:** Core = white · Nullifier = violet (draining an Emitter) / gray (inactive).
+With Nullifier reconfiguration on (opt-in): dim violet = preparing · pale violet, pulsing = Ready (press **N**) · violet = engaged · gray = disconnected or no Emitter in range.
 
 **Stabilizer condition** (marker color): light green = Normal · amber = Warning · orange = Critical (slow pulse) · red = Breached (faster pulse) · gray = inactive (not connected).
 Condition = share of the Stabilizer's footprint that is contaminated (thresholds tunable under *Containment Condition* on the GridManager).
@@ -68,6 +70,7 @@ The brush only affects Desync paint (Left Click with no tool) and erase (Right C
 - **Stabilizers** relay the connection onward; **Nullifiers** connect but do not relay.
 - Unconnected Stabilizers apply **no** stabilization. Unconnected Nullifiers do nothing.
 - A connected Nullifier drains the nearest active Emitter within **Nullifier Range** (default 6 cells). At 0 integrity the Emitter stops sustaining Desync.
+- With **Nullifier Reconfiguration Enabled** (opt-in, under Sync Infrastructure; see `Docs/SYNC_INFRASTRUCTURE.md` §9) the drain is replaced: the Nullifier fills a pulse store with Sync Charges, the player presses **N**, and three timed stages each end in a pulse. Several Nullifiers do not speed it up.
 
 ## Known Prototype Quirks
 

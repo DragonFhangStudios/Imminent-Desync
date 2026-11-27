@@ -24,6 +24,9 @@ using UnityEngine;
 // - F3 (increment 2A): after the foothold's upkeep, a minimum share of generation is reserved for
 //   construction, so construction never fully starves. A Sync Core always generates enough for both.
 // - SyncChargeAllocator hands out the rest (Option A: round-robin across categories, placement order).
+// - N1-A (increment 3, opt-in with nullifierReconfigurationEnabled): completed, connected Nullifiers with an
+//   Emitter in range fill a pulse store through the NullifierOperation category. The staged
+//   reconfiguration itself lives in NullifierReconfiguration.
 
 [Serializable]
 public class SyncInfrastructureSettings
@@ -75,7 +78,25 @@ public class SyncInfrastructureSettings
 	[Tooltip("S2 safeguard. PROVISIONAL test value. The N connected, completed Stabilizers nearest a Sync Core are the foothold (ties: placement order): their upkeep is served first, and a Sync Core always generates at least their total upkeep plus the construction share.")]
 	public int footholdStabilizerCount = 2;
 
+	[Header("Nullifier reconfiguration N1–N3 (increment 3, opt-in)")]
+	[Tooltip("Opt-in, and only with Sync Infrastructure enabled. On: Nullifiers prepare with Sync Charges, the player initiates (N), and staged pulses reconfigure the Emitter. Off = the current Integrity drain.")]
+	public bool nullifierReconfigurationEnabled = false;
+
+	[Min(1)]
+	[Tooltip("PROVISIONAL test value (decision 2 open). Sync Charges one reconfiguration pulse uses; also a Nullifier's store capacity. A Nullifier is Ready when its store is full.")]
+	public int nullifierPulseCost = 30;
+
+	[Min(1)]
+	[Tooltip("PROVISIONAL test value (decision 2 open). Most charges one Nullifier can receive per tick.")]
+	public int maxNullifierIntakePerTick = 2;
+
+	[Min(1)]
+	[Tooltip("PROVISIONAL test value (decision 2 open). Qualifying simulation ticks each of the three stages needs before its pulse.")]
+	public int reconfigurationStageTicks = 150;
+
 	public bool SupplyActive => enabled && stabilizerSupplyEnabled;
+
+	public bool ReconfigurationActive => enabled && nullifierReconfigurationEnabled;
 
 	// Blueprint cost for a structure type, or 0 if the type is not built through Reconstruction.
 	public int ConstructionCost(StructureType type)
@@ -158,6 +179,8 @@ public class SyncDiagnostics
 	public int ConstructionDelivered;
 	public int SupplyDemand;
 	public int SupplyDelivered;
+	public int NullifierDemand;
+	public int NullifierDelivered;
 
 	// Increment 2A: charges set aside before the general allocation this tick.
 	public int FootholdReserved;      // S2: foothold upkeep
@@ -174,6 +197,14 @@ public class SyncDiagnostics
 	public int StabilizersReduced;
 	public int StabilizersStarved;
 	public int StoredCharges;
+
+	// Nullifier reconfiguration (increment 3, opt-in): statuses after this tick's step.
+	public int NullifiersPreparing;
+	public int NullifiersReady;
+	public int NullifiersEngaged;
+	public int NullifiersInactive;    // disconnected or no Emitter in range
+	public int PulsesFired;
+	public int TotalPulses;
 
 	public long TotalGenerated;
 	public long TotalDistributed;
@@ -222,14 +253,16 @@ public static class SyncInfrastructure
 		return settings.SupplyActive && structure.Type == StructureType.Stabilizer && !structure.UnderConstruction;
 	}
 
-	// One simulation tick of generation, allocation, construction and U2 supply.
+	// One simulation tick of generation, allocation, construction, U2 supply and Nullifier preparation.
 	// Connectivity (IsConnected) must be current. isCellClean answers "is this cell clean ground?".
+	// nullifierHasTarget (increment 3) answers "does this Nullifier have an Emitter in range?"; null = yes.
 	// Returns true if at least one blueprint completed, so the caller must refresh the network.
 	public static bool Step(
 		List<PlacedStructure> structures,
 		Func<Vector2Int, bool> isCellClean,
 		SyncInfrastructureSettings settings,
-		SyncDiagnostics diagnostics)
+		SyncDiagnostics diagnostics,
+		Func<PlacedStructure, bool> nullifierHasTarget = null)
 	{
 		ResetTickDiagnostics(diagnostics);
 
@@ -334,7 +367,32 @@ public static class SyncInfrastructure
 			}
 		}
 
-		diagnostics.Demand = diagnostics.ConstructionDemand + diagnostics.SupplyDemand;
+		// N1-A (increment 3): a completed, connected Nullifier with an Emitter in range fills its pulse store.
+		if (settings.ReconfigurationActive)
+		{
+			int pulseCapacity = Mathf.Max(1, settings.nullifierPulseCost);
+			int nullifierIntake = Mathf.Max(1, settings.maxNullifierIntakePerTick);
+
+			foreach (var structure in structures)
+			{
+				if (!NullifierReconfiguration.IsOperationalNullifier(structure, settings) || !structure.IsConnected)
+					continue;
+
+				if (nullifierHasTarget != null && !nullifierHasTarget(structure))
+					continue;
+
+				int demand = Mathf.Min(nullifierIntake, Mathf.Max(0, pulseCapacity - structure.StoredCharges));
+
+				if (demand <= 0)
+					continue;
+
+				requests.Add(new SyncChargeRequest(SyncChargeCategory.NullifierOperation, structure.PlacementOrder, demand));
+				requesters.Add(structure);
+				diagnostics.NullifierDemand += demand;
+			}
+		}
+
+		diagnostics.Demand = diagnostics.ConstructionDemand + diagnostics.SupplyDemand + diagnostics.NullifierDemand;
 
 		// --- Allocation ---
 		int[] grants = SyncChargeAllocator.Allocate(available, requests);
@@ -404,6 +462,16 @@ public static class SyncInfrastructure
 			}
 		}
 
+		// --- Nullifier pulse stores (increment 3) ---
+		for (int i = 0; i < requesters.Count; i++)
+		{
+			if (requests[i].Category != SyncChargeCategory.NullifierOperation)
+				continue;
+
+			requesters[i].StoredCharges += grants[i];
+			diagnostics.NullifierDelivered += grants[i];
+		}
+
 		// --- Diagnostics ---
 		foreach (var structure in structures)
 		{
@@ -417,7 +485,7 @@ public static class SyncInfrastructure
 		}
 
 		diagnostics.Generated = generated;
-		diagnostics.Distributed = diagnostics.ConstructionDelivered + diagnostics.SupplyDelivered;
+		diagnostics.Distributed = diagnostics.ConstructionDelivered + diagnostics.SupplyDelivered + diagnostics.NullifierDelivered;
 		diagnostics.Unused = generated - diagnostics.Distributed;
 		diagnostics.TotalGenerated += generated;
 		diagnostics.TotalDistributed += diagnostics.Distributed;
@@ -509,6 +577,8 @@ public static class SyncInfrastructure
 		diagnostics.ConstructionDelivered = 0;
 		diagnostics.SupplyDemand = 0;
 		diagnostics.SupplyDelivered = 0;
+		diagnostics.NullifierDemand = 0;
+		diagnostics.NullifierDelivered = 0;
 		diagnostics.FootholdReserved = 0;
 		diagnostics.ConstructionReserved = 0;
 		diagnostics.WaitingForConnection = 0;

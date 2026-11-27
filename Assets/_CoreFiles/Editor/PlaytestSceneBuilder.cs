@@ -16,8 +16,17 @@ public static class PlaytestSceneBuilder
 	public const string SourceScenePath = "Assets/_CoreFiles/Scenes/Sandbox.unity";
 	public const string PlaytestScenePath = "Assets/_CoreFiles/Scenes/Playtest_SyncSupply.unity";
 
+	// Combined playtest (2A merged into increment 3, Director 2026-11-26): the same scene plus Nullifier
+	// reconfiguration N1–N3 (increment 3 opt-in) instead of the Integrity drain.
+	public const string CombinedScenePath = "Assets/_CoreFiles/Scenes/Playtest_Combined.unity";
+
 	[MenuItem("Imminent Desync/Rebuild Sync Supply Playtest Scene")]
-	public static void Build()
+	public static void Build() => BuildScene(PlaytestScenePath, reconfiguration: false);
+
+	[MenuItem("Imminent Desync/Rebuild Combined Playtest Scene (2A + Nullifier reconfiguration)")]
+	public static void BuildCombined() => BuildScene(CombinedScenePath, reconfiguration: true);
+
+	private static void BuildScene(string path, bool reconfiguration)
 	{
 		var scene = EditorSceneManager.OpenScene(SourceScenePath, OpenSceneMode.Single);
 		var gm = Object.FindAnyObjectByType<GridManager>();
@@ -30,13 +39,15 @@ public static class PlaytestSceneBuilder
 		Set(so, "syncInfrastructure.enabled", true);
 		Set(so, "syncInfrastructure.stabilizerSupplyEnabled", true);
 		Set(so, "realityIntegrityDefeat", true);
+		if (reconfiguration)
+			Set(so, "syncInfrastructure.nullifierReconfigurationEnabled", true);
 		so.ApplyModifiedPropertiesWithoutUndo();
 
-		if (!EditorSceneManager.SaveScene(scene, PlaytestScenePath, true))
-			throw new System.InvalidOperationException("Could not save " + PlaytestScenePath);
+		if (!EditorSceneManager.SaveScene(scene, path, true))
+			throw new System.InvalidOperationException("Could not save " + path);
 
 		AssetDatabase.Refresh();
-		Debug.Log("PlaytestSceneBuilder: wrote " + PlaytestScenePath + " from " + SourceScenePath + " (Sandbox not saved).");
+		Debug.Log("PlaytestSceneBuilder: wrote " + path + " from " + SourceScenePath + " (Sandbox not saved).");
 	}
 
 	private static void Set(SerializedObject so, string path, bool value)

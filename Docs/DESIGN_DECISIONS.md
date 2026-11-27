@@ -112,7 +112,9 @@ and no new mechanics beyond the approved ones.
 > reconfiguration pulses. No other resource or building is required."
 
 - [Open] Stage conditions, durations, effects, redundancy behavior and charge costs.
-- Implementation belongs to roadmap increment 3, which was authorized on 2026-11-25 (§6). Its plan is still to be approved.
+- Implementation belongs to roadmap increment 3, which was authorized on 2026-11-25 (§6). Its plan was approved the same
+  day and it is implemented opt-in, with provisional values and choices C1–C10 (`Docs/SYNC_INFRASTRUCTURE.md` §9).
+  The open details above are unchanged.
 
 ### 4.6 Emitter lifecycle and victory [Approved]: record N4
 
@@ -189,6 +191,22 @@ remain provisional; decision 5 stays open beyond these values. `Sandbox.unity` i
 approved and implemented, with publication held until 2A validation and the integration review are complete.
 Increment 4 onward, Gate D and The Basin remain unauthorized. Details: `SYNC_INFRASTRUCTURE.md` §8.6.
 
+**2026-11-26, later:** the Director approved publication of increment 2A and keeping the playtest scene in the
+increment 2 pull request. He also approved integrating 2A into the increment 3 branch by a merge that preserves the
+increment 3 commit and its history, followed by the full regression suite and a compatibility check of construction,
+Stabilizer upkeep and Nullifier preparation. F6 (S4 timing) is kept as an unresolved balancing finding: no threshold
+or tuning change. The combined build is to be prepared for interactive playtesting, with no further feature
+development. The increment 2 pull request stays unmerged. Increment 4, Gate D and The Basin remain unauthorized.
+Integration details: `SYNC_INFRASTRUCTURE.md` §9.5.
+
+**2026-11-26, overnight assignment:** the Director assigned two work packages on the combined implementation (PR #6
+`9f4c976` and PR #7 `532ae92`, both draft and unmerged): (1) a local Windows x64 standalone development build of the
+combined playtest scene, built outside the repository and without permanently changing build settings or the Sandbox
+scene; (2) an automated full-loop validation from a Sync Core near the map rim (Observe → Establish → Defend →
+Advance → Neutralize), comparing a direct advance, a defense-first advance and an idle control, with no tuning change.
+No production tuning, new gameplay systems, increment 4 or The Basin. Results: `SYNC_INFRASTRUCTURE.md` §9.6;
+findings F8 and F9 are recorded there, not acted on.
+
 ## 7. Open Director decisions
 
 1. Recovery mathematics after reconfiguration (post-victory decay, Restoration strength, radius and duration, or a combination).
@@ -211,6 +229,9 @@ Increment 4 onward, Gate D and The Basin remain unauthorized. Details: `SYNC_INF
 7. Scheduling of the comparative suppression playtest and of the replacement research study.
 8. ~~Gate B completion~~ — **passed 2026-11-25** (§6). Gate D authorization is still open.
 9. Map-boundary behavior and natural decay remain open design and test decisions. `decayRate` stays.
+10. Intended progression vs. Sync Core placement (findings F8 and F9, `SYNC_INFRASTRUCTURE.md` §9.6, 2026-11-26):
+    whether a mission must be winnable from a Sync Core near the map rim, and whether Sync Core placement should be
+    constrained. Recorded, not decided; nothing was changed.
 
 ## 8. Deferred features
 

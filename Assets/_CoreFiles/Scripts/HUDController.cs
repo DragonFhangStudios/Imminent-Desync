@@ -173,6 +173,14 @@ public class HUDController : MonoBehaviour
 				containmentNodeLabel.text +=
 					$"\nStabilizer Supply: {stats.stabilizersSupplied} supplied  |  {stats.stabilizersOnStore} on store  |  {stats.stabilizersReduced} reduced  |  {stats.stabilizersStarved} starved  |  Delivered {stats.supplyDelivered}/{stats.supplyDemand}  |  Stored {stats.storedCharges}";
 			}
+
+			// Nullifier reconfiguration (increment 3, opt-in).
+			if (stats.reconfigurationEnabled)
+			{
+				containmentNodeLabel.text +=
+					$"\nNullifiers: {stats.nullifiersReady} ready  |  {stats.nullifiersPreparing} preparing  |  {stats.nullifiersEngaged} engaged  |  {stats.nullifiersInactive} inactive  |  Delivered {stats.nullifierDelivered}/{stats.nullifierDemand}" +
+					(string.IsNullOrEmpty(stats.reconfigurationText) ? "" : $"\nReconfiguration: {stats.reconfigurationText}");
+			}
 		}
 
 		// ---- Desync field ----

@@ -1,11 +1,13 @@
 # Sync Infrastructure — Sync Charges, Reconstruction, Stabilizer supply and safeguards
 
-**Status:** roadmap increments 1, 2 and 2A (playability pass, §8.6) implemented, opt-in, verified by automated
-EditMode tests. Gate B (the Director's interactive Sandbox playtest) passed on 2026-11-25. The 2A playtest scene and
-overlay have not yet been played by hand, so controls, presentation and feel remain unverified.
+**Status:** roadmap increments 1, 2, 2A (playability pass, §8.6) and 3 (Nullifier reconfiguration, §9) implemented,
+opt-in, verified by automated EditMode tests; 2A was merged into the increment 3 branch on 2026-11-26 (§9.5). Gate B
+(the Director's interactive Sandbox playtest) passed on 2026-11-25. The playtest scenes and overlay have not yet been
+played by hand, so controls, presentation and feel remain unverified.
 **Design reference:** `Docs/DESIGN_DECISIONS.md` §4.1 (D2-A Reconstruction), §4.2 (U2 supply), §4.3 (Option A
 allocation) and §7 item 3 (safeguards S1–S4, approved by the Director on 2026-11-25). Increment 2 (U2 supply and
-safeguards) is described in §8 below.
+safeguards) is described in §8 below; increment 3 (Nullifier reconfiguration N1–N3 with N1-A, `DESIGN_DECISIONS.md`
+§4.5) in §9.
 
 ## 1. What it does
 
@@ -28,14 +30,15 @@ The Sync Core itself is never a blueprint (see A1).
 1. `UpdateSyncInfrastructure()`: generation → demand → allocation → construction. If a blueprint completed, the network is
    refreshed, so the new structure relays and stabilizes **in the same tick**. Does nothing while disabled.
 2. `Simulate()`, `UpdateNullifiers()`, `CalculateIntegrity()`, `CalculateActivity()`, `UpdateContainmentStatus()`,
-   `RenderGrid()`: unchanged, in the previous order.
+   `RenderGrid()`: unchanged, in the previous order. With increment 3's opt-in on, `UpdateNullifiers()` runs the
+   staged reconfiguration instead of the Integrity drain (§9).
 
 ## 3. Allocation rule (`SyncChargeAllocator`)
 
 - Charges are whole units, handed out one at a time.
 - **Across categories:** round-robin in the fixed order Construction → Stabilizer supply → Nullifier operation, so no
-  category with demand starves. Only Construction has consumers in increment 1; the other two categories are reserved
-  for U2 (increment 2) and N1-A (increment 3).
+  category with demand starves. Only Construction has consumers in increment 1; Stabilizer supply is used by U2
+  (increment 2) and Nullifier operation by N1-A (increment 3), each only while its opt-in is on.
 - **Within a category:** placement order. The earliest-placed eligible blueprint is served first, up to its per-tick
   intake; then the next one. Construction spam delays later blueprints instead of spreading charges thinly.
 - Blueprints that are disconnected or on contaminated ground make **no request**, so they never hold up eligible ones.
@@ -79,6 +82,11 @@ Run with the studio's locking runner (`-Mode Tests -TestPlatform EditMode`). Tes
 | `SyncDebugOverlayTests` (increment 2A) | The overlay text: Sync off, charges, reservations, upkeep, blueprint progress, each Stabilizer, MISSION FAILED, truncation, and that building it changes nothing. |
 | `PlaytestSceneTests` (increment 2A) | The playtest scene's settings and starting Emitter, the overlay starting hidden, the five-item manual checklist scripted step by step with the same coordinates, the S4 defeat tick without player action, determinism. |
 | `StabilizerSupplySceneTests` (increment 2) | In the real simulation: the **required severed-connection acceptance scenario** (compared with an unsevered control run), recovery from a collapse around the Sync Core, effectiveness scaling stabilization, S4 defeat on/off/after victory, Sandbox defaults off. |
+| `NullifierReconfigurationTests` (increment 3) | Opt-in defaults, off = no requests, preparation with Sync Charges, disconnected or out-of-range Nullifiers, blueprint Nullifiers, manual initiation only from Ready and once per sequence, stage timing and pulses, interruption resets only the current stage, one vs. four Nullifiers, removing the initiating or the last Nullifier, waiting for a full pulse store, sharing charges with construction, determinism. |
+| `IntegratedAllocationTests` (2A + 3 integration) | Every consumer at once: the order foothold → construction share → round-robin; Nullifier preparation never taking the foothold upkeep or the construction share; Nullifier Ready time; finding F7 (contention delay); charge conservation and determinism over a mixed run. |
+| `CombinedPlaytestSceneTests` (2A + 3 integration) | The combined playtest scene's settings, the combined checklist scripted with the same coordinates (reconfigured before defeat), the F6 late-start diagnostic, determinism. |
+| `FullLoopProgressionTests` (overnight assignment, 2026-11-26) | The full loop from a Sync Core near the map rim in the combined scene as saved: idle control, direct advance, defense-first advance and the lean best case; the best case from all four rim directions and with late starts; a Sync Core distance sweep; determinism. Diagnostics that print measurements (§9.6). |
+| `NullifierReconfigurationSceneTests` (increment 3) | In the real simulation at the shipped defaults: Sandbox keeps the drain; the full sequence (build, Ready, no progress without initiation, three stages, production stops, objective flag); determinism; severing the network mid-stage; one vs. three Nullifiers; U2 on at generation 8; a diagnostic of U2 on at the shipped defaults (finding F3). |
 
 **Not verified automatically:** interactive input, HUD layout and readability, marker colors, Play-mode timing (frame-rate
 dependent tick rate), and how it feels to play. These need the Director's playtest.
@@ -94,9 +102,18 @@ dependent tick rate), and how it feels to play. These need the Director's playte
 4. Stop Play. Sync Infrastructure is off again automatically.
 5. For increment 2, also tick **Stabilizer Supply Enabled** in the same block (and, to try S4, **Reality Integrity
    Defeat** further down) during Play mode before placing anything. See §8.
-6. Since increment 2A there is a ready-made scene instead: open `Assets/_CoreFiles/Scenes/Playtest_SyncSupply.unity`
+6. For increment 3, also tick **Nullifier Reconfiguration Enabled** in the same block, before placing anything. Place a
+   Core, then a Nullifier (`3`) within 6 cells of the Emitter and connected to the network; when its marker turns
+   pale and pulses (Ready), press **N** with the cursor near it. See §9.
+7. Since increment 2A there is a ready-made scene instead: open `Assets/_CoreFiles/Scenes/Playtest_SyncSupply.unity`
    and press **Play**. It has Sync Charges, Reconstruction, U2 and S4 on and starts with an Emitter at the grid centre.
    Press **`** (backquote) for the debug overlay. See §8.6.
+8. To play increments 2A and 3 together, open `Assets/_CoreFiles/Scenes/Playtest_Combined.unity` instead. It is the
+   same scene with Nullifier reconfiguration on: place a Nullifier, wait for Ready, then press **N**. See §9.5.
+9. To play it without the Editor, build a standalone development player of the combined scene:
+   `Unity -batchmode -executeMethod PlaytestDevBuild.BuildCombinedWindows64 -dfsBuildOut <folder outside the project> -quit`
+   (Windows x64, Mono, development build, `Playtest_Combined.unity` only). The scene list is passed to the build
+   directly, so `EditorBuildSettings` and the Player settings are not changed. See §9.6.
 
 ## 8. Increment 2 — U2 Stabilizer supply and recovery safeguards S1–S4
 
@@ -141,7 +158,7 @@ consumption, storage, effectiveness curve) is **not decided**: every number belo
 | B4 | A Stabilizer **completed this tick** starts with an empty store and gets supply from the next tick, so it shows *Starved* for one tick. |
 | B5 | The Sync Core still stores nothing; only Stabilizers store (S3). |
 | B6 | **S4 defeat** pauses the simulation and logs; the results/restart flow belongs to the mission-flow increment (5). Defeat is disabled after the objective is complete (D4). |
-| B7 | Nullifiers still need no supply (N1-A belongs to increment 3). |
+| B7 | Nullifiers still need no supply (N1-A belongs to increment 3). Superseded by increment 3 while its opt-in is on (§9). |
 
 ### 8.4 Required acceptance scenario: severed connection (automated)
 
@@ -272,3 +289,180 @@ Findings (for the Director; nothing was tuned beyond the brief):
   after a successful reconnection, while territory was still being reclaimed. Local Reconstruction does not move this
   much; whether a player can reach and drain the Emitter with a Nullifier in time was **not tested** and is the
   main question for the manual playtest. Input to decision 5 and to S4 (D1).
+
+## 9. Increment 3 — Nullifier reconfiguration N1–N3 with N1-A
+
+**Authorized 2026-11-25** (Director: "Approve increment 3"; plan approved the same day). Decision 2 (stage conditions,
+durations, effects, redundancy behavior and charge costs) is **open**: every number and every choice marked C below is
+provisional. N4 (victory latch, Restoration, Emitter removal) and the recovery mathematics belong to increment 4.
+
+### 9.1 Behavior
+
+| Area | Behavior |
+|---|---|
+| Opt-in | `GridManager` → **Sync Infrastructure** → `nullifierReconfigurationEnabled`, only together with `enabled`. Default **off**; `Sandbox.unity` does not contain it, so the Sandbox keeps the Integrity drain exactly. |
+| Preparation (N1, N1-A) | A completed, connected Nullifier with an active Emitter in range fills a **pulse store** with Sync Charges (allocation category *Nullifier operation*). It is **Ready** when the store holds one pulse. |
+| Initiation (N1) | Manual, once per sequence: **N** initiates from the Ready Nullifier nearest the cursor. `GridManager.TryInitiateReconfiguration` is the simulation command; the key only calls it. |
+| Stages (N2) | Synchronize → Disrupt → Reconfigure. Each needs `reconfigurationStageTicks` qualifying ticks, then a pulse that uses one full store. A qualifying tick has at least one completed, connected Nullifier targeting that Emitter. |
+| Interruption (N3) | A tick with no qualifying Nullifier resets the current stage's progress. Completed stages are kept on the Emitter. |
+| No acceleration (N3) | Progress belongs to the Emitter and advances at most once per tick, so one or many Nullifiers finish on the same tick. No placement limit. |
+| End state | Each completed stage lowers the Emitter's Integrity by a third; the final stage sets it to 0, the drain's existing end state: production stops and the existing objective flag fires, exactly as with the drain. |
+| Diagnostics | HUD *Nullifiers* and *Reconfiguration* lines (only while on), hover text on Nullifiers and the Emitter, marker colors (dim violet preparing, pale pulsing Ready, violet engaged, gray inactive). |
+
+### 9.2 Provisional values (decision 2 open)
+
+| Setting | Value | Meaning |
+|---|---|---|
+| `nullifierPulseCost` | 30 | Charges per pulse; also the store capacity. |
+| `maxNullifierIntakePerTick` | 2 | So a store fills in 15 ticks (1.5 s at the Sandbox tick rate). |
+| `reconfigurationStageTicks` | 150 | Per stage; 450 ticks (45 s) in total, close to the drain's 500 ticks for one Nullifier. |
+| `nullifierConstructionCost` | 60 | Unchanged from increment 1. |
+
+### 9.3 Engineering assumptions for increment 3 (Director review)
+
+| # | Assumption |
+|---|---|
+| C1 | **Readiness** = completed, connected, an active Emitter in range, full pulse store. The proposed "Nullifier's own cell must be clean" condition is **not** included. |
+| C2 | Nullifiers have **no upkeep**; a disconnected Nullifier keeps its store but does not refill. |
+| C3 | Initiation is **once per sequence**; after an interruption the sequence continues without re-initiation. |
+| C4 | **Redundancy:** any qualifying Nullifier sustains a started sequence (resilience, never speed). The pulse comes from the oldest full store. |
+| C5 | When a stage's time is complete but no store is full, the stage **waits** with its progress held ("waiting for a full pulse store"); it is not reset. |
+| C6 | **Stage effects:** Synchronize and Disrupt have no simulation effect (Disrupt does not reduce Emitter output); only the Integrity display steps down. |
+| C7 | Durations count **simulation ticks**, so they pause and single-step with the simulation and are deterministic. |
+| C8 | With the opt-in on, the Integrity drain does not run. Turning the opt-in off mid-sequence returns to the drain from the current Integrity (not tested). |
+| C9 | Sandbox debug: removing an Emitter discards its progress, since the progress belongs to the Emitter. |
+| C10 | Blueprint rules are unchanged: a Nullifier blueprint still needs clean ground or the S1 emergency radius (D2-A). |
+
+### 9.4 Results (headless run `id-inc3-nullifier-2`, 2026-11-25)
+
+EditMode **72/72 passed**. The Sandbox smoke test passes 63/63 and matches the recorded baseline exactly (final total
+Desync 21332.911624925426), so the Sandbox keeps the drain.
+
+| Scenario (real simulation, Sandbox scene) | Result |
+|---|---|
+| Shipped defaults, U2 supply off (generation 4) | Nullifier blueprint built in 30 ticks, Ready 15 ticks later; no progress in 200 ticks without initiation; stages complete 150 / 300 / 450 ticks after initiation; production stops and the objective flag fires. |
+| Same run twice | Identical (completion tick and grid Desync sum). |
+| Sync Core removed 100 ticks into stage 2 | Stage 2 restarts, stage 1 is kept, one interruption; after the Core is rebuilt, 300 more ticks (stage 2 in full, then stage 3) with no re-initiation. |
+| One vs. three Nullifiers | Both 450 ticks. |
+| U2 supply on, test-fixture generation 8, two-Stabilizer foothold | Nullifier Ready 45 ticks after placement; reconfigured 450 ticks after initiation. |
+| **U2 supply on, shipped defaults (generation 4)** — diagnostic | **The Nullifier blueprint received 0 of 60 charges in 2,000 ticks** (*waiting for charges*): the foothold's reserved upkeep (2 × 2) takes the whole generation of 4. This is finding F3 (§8.5.2) applied to the Nullifier: at these defaults a Nullifier can never be built once two Stabilizers stand. Input to decision 5; nothing was changed. |
+
+**Not verified automatically:** the N key, HUD lines, hover text, marker colors and the Ready pulse, and how the
+sequence feels to play. These need the Director's playtest.
+
+### 9.5 Integration with increment 2A (2026-11-26)
+
+**Approved by the Director on 2026-11-26** ("Approve the proposed integration of Increment 2A into the existing
+Increment 3 branch using a merge, preserving commit ad6030e and its history"). Increment 2A (`9f4c976`) was merged into
+this branch as a merge commit. `ad6030e` is unchanged and nothing was rebased. No gameplay value was changed by the
+integration; F6 stays an open balancing finding. The table in §9.4 records increment 3 alone at the time; at the
+merged defaults (generation 8, 25 % construction share) its last row no longer applies.
+
+**Charge order in one tick** (with every opt-in on):
+1. The foothold's upkeep: the 2 connected Stabilizers nearest the Sync Core.
+2. The construction share: 25 % of generation, for eligible blueprints.
+3. Round-robin, one charge at a time, across construction, Stabilizer supply and Nullifier preparation, in that order.
+
+**Combined playtest scene:** `Assets/_CoreFiles/Scenes/Playtest_Combined.unity` (builder:
+`PlaytestSceneBuilder.BuildCombined`). It is the 2A playtest scene with `nullifierReconfigurationEnabled` on, so N1–N3
+replaces the Integrity drain. The 2A scene `Playtest_SyncSupply.unity` keeps the drain and is unchanged.
+
+**Results** (headless run `id-integ-tests-1`): EditMode **99/99 passed**. That is 67 from 2A, 23 from increment 3,
+`IntegratedAllocationTests` (5) and `CombinedPlaytestSceneTests` (4). The Sandbox smoke test passes 63/63 and matches
+the recorded baseline exactly (final total Desync 21332.911624925426).
+
+| Check | Result |
+|---|---|
+| Order with all three consumers (exact charge counts) | Foothold 4, construction share 2, then one charge each to supply and the Nullifier, out of 8. |
+| Four preparing Nullifiers and three blueprints, 200 ticks | Foothold at 100 % every tick; the construction share is honored every tick; every blueprint completes; every charge is accounted for. |
+| Nullifier with only the foothold competing | Ready in 15 ticks: 2 per tick into a 30-charge store. |
+| Increment 3's F3 diagnostic at the merged defaults | Nullifier built 30 ticks after placement; it was 0 of 60 in 2,000 ticks before. It now asserts this. |
+| Combined checklist, scripted (Core (50,57), Stabilizers (48,58) and (52,58), Nullifier (50,56), all placed at tick 0) | Stabilizers built at tick 20, Nullifier built at 30, Ready at 45, N at 45, reconfigured at **495** (450 after initiation, as in increment 3 alone). Reality Integrity 91.7 %, no defeat, foothold at 100 %. Deterministic. |
+| F6 diagnostic: the same build started later | Start at tick 300: reconfigured at 795 (integrity 79.1 %). Start at 600: 1095 (52.3 %). Start at 900: 1395 (30.2 %, just above the threshold). Every run was **won**. |
+
+**Finding F7 (recorded, not changed):** Nullifier preparation is last in the allocator's category order. When only two
+charges remain after the foothold and the construction share, and both construction and Stabilizer refill still want
+charges, the Nullifier receives nothing that tick. In the contention test it got its first charge at tick 21 and was
+Ready at 40, against 15 uncontended. It is a delay, not starvation, while construction lasts, but a player who keeps
+placing blueprints can hold Nullifier preparation back. Input to decision 2 or 5.
+
+**F6 in the combined game:** a player who builds next to the Emitter (the S1 emergency radius makes the Nullifier site
+always buildable) reconfigures it in about 50 s. Starting at 90 s (tick 900) still wins, just above the 30 % threshold.
+How this feels by hand is the main question for the playtest. The threshold is unchanged.
+
+### 9.6 Standalone Development Build 001 and full-loop validation (2026-11-26, overnight)
+
+Assigned by the Director (`DESIGN_DECISIONS.md` §6). No gameplay code, tuning, scene or project setting was changed.
+
+#### 9.6.1 Standalone Development Build 001
+
+- **Builder:** `PlaytestDevBuild.BuildCombinedWindows64` (Editor only). It builds `Playtest_Combined.unity` alone as a
+  Windows x64 development player (Mono) into a folder given on the command line, which must be outside the project.
+  The scene list goes straight to `BuildPipeline`, so `EditorBuildSettings` (Sandbox only) and the Player settings are
+  untouched.
+- **Run `id-devbuild001-1`:** build succeeded at the tree of `532ae92` plus the builder. 0 errors, 1 warning (the
+  existing CS0414 on `GridManager.placementMode`), 315 files, about 173 MB, one scene (`level0`), no Editor or test
+  assemblies in the player.
+- **Unity rewrote five tracked settings files during the build:** a format upgrade (`ProjectSettings.asset`
+  serializedVersion 28 → 29, new default fields in it and `GraphicsSettings.asset`) and URP's build-time shader
+  prefiltering data (`UniversalRP.asset`, `UniversalRenderPipelineGlobalSettings.asset`, `DefaultVolumeProfile.asset`).
+  They are **not committed**. The Director decides whether to discard them or commit them separately, as for any
+  Editor rewrite.
+- **Startup was not verified.** Launching the built executable from the session was blocked by the studio's command
+  guard, and per studio rules it was not retried another way. Startup, input, HUD and feel need the Director's run.
+
+#### 9.6.2 Full gameplay loop from the map rim
+
+**Test:** `FullLoopProgressionTests`, in the combined scene as saved (Emitter at (50,50), shipped provisional values).
+A scripted player uses only player actions (placing structures through the game's own placement, and **N**), and
+chooses cells from what the map shows. It respects S1 (it may build within 3 cells of the Sync Core on contaminated
+ground) and keeps chain blueprints 2 cells away from visible contamination. Sync Core 44 cells north of the Emitter
+(6 cells from the rim) unless stated. Results are identical in runs `id-fullloop-4` and `id-devbuild001-tests-1`.
+
+| Run | Outcome | What happened |
+|---|---|---|
+| Idle control (Core + 2-Stabilizer foothold, then nothing) | **Lost**, S4 at tick 1413 | Foothold built at tick 20 and held at 100 %. Contamination reaches 6 cells from the Emitter by tick 100, 22 by tick 600, 34 by tick 1000. |
+| Direct advance (foothold, then the next link as soon as the front completes) | **Lost**, S4 at 1450 | A relay 9 cells from the Emitter by tick 100. No buildable cell within Nullifier range from tick 75 on, so no Nullifier. 6 Stabilizers on 8 charges per tick: the 2 frontmost starve from tick 100. |
+| Defense-first (each front fully supplied, full store and clean footprint before the next step; at most 150 ticks) | **Lost**, S4 at 1450 | The front stalls 16 cells from the Emitter at tick 250: by then every cell a next link could use is contaminated. |
+| Lean direct, best case (no separate foothold, links 8 cells apart from the Core) | **Lost**, S4 at 1513 | Reaches Nullifier reach at tick 81 (four serial 20-tick builds). A 5th link 9 cells from the Emitter is needed to clear the Nullifier site, but it starves (5 × 2 upkeep > 8 generated). |
+| Lean direct from the south, east and west rims | **Lost**, S4 at 1503 to 1577 | Same mechanism in every direction; terrain shifts the defeat tick only. |
+| Lean direct, first action at tick 150 / 300 | **Lost**, S4 at 1494 / 1464 | Later starts only get worse: at tick 300 the chain cannot get closer than 17 cells. |
+
+**Sync Core distance sweep** (lean direct, north): **won at every distance from 9 to 40 cells, lost at 42 and 44.**
+
+| Sync Core distance | Chain links | Nullifier built | Reconfigured (integrity) |
+|---|---|---|---|
+| 9, 12, 14 | 0 (the Core reaches the Nullifier site) | tick 31 | 496 (87.4 %) |
+| 16 to 22 | 1 | 51 | 516 (88.5–90.2 %) |
+| 24 to 30 | 2 | 71 | 536 (87.9–89.6 %) |
+| 32 | 3 | 91 | 556 (88.9 %) |
+| 36 / 38 / 40 | 4 | 153 / 172 / 132 | 618 / 637 / 597 (85.7–87.5 %) |
+| 42 | 4 | never: its blueprint waits for clean ground from tick 101 | lost, S4 at 1535 |
+| 44 (rim) | 5, the 5th starves | not placeable | lost, S4 at 1513 |
+
+**Findings (recorded, not changed):**
+
+- **F8: the intended progression cannot be completed from the rim at the shipped values.**
+  - The limiting mechanism is two rules together:
+    - **The Nullifier site.** A Nullifier blueprint needs clean ground within 6 cells of the Emitter. Without a
+      supplied Stabilizer near it, the whole Nullifier range is contaminated at tick 75 in every run, whatever the
+      player does. `decayRate` is 0 in the scene, so it never clears by itself.
+    - **The supply ceiling.** 8 charges per tick fully upkeep 4 completed Stabilizers. From 44 cells, the front has to
+      be within about 9 cells to clean the site, which takes 5 links, so the frontmost starves at 0 %.
+  - With the Core at 40 cells, 4 fully supplied links put one 8 cells from the Emitter, which pulls the site back to
+    clean (Desync 4.8 at tick 94), and the run wins.
+  - Inputs: decision 5 (generation, upkeep), decision 4 (blueprints on contaminated ground), decision 2 (Nullifier
+    range and readiness), and map size.
+- **F9: Sync Core placement has no constraint, so placing it near the Emitter dominates.**
+  - A Core can go on any free cell, at any distance, even on contaminated ground.
+  - Within 9 cells of the Emitter, S1 makes the Nullifier site always buildable, and the existing checklist wins in
+    about 50 s.
+  - The further the Core, the later the win. Defense-first never helps.
+  - Whether the rim start is the intended mission start, and whether Core placement should be limited, is a Director
+    decision (`DESIGN_DECISIONS.md` §7 item 10).
+- **F6 (S4 at 30 %) did not bind in any run.** Every win finished by tick 640, and S4 came at ticks 1413–1577. Lost
+  runs failed on F8 long before Integrity mattered. F6 stays open for late starts (§9.5).
+- **F7 (Nullifier preparation last) did not bind either.** In every winning run the Nullifier got all it asked for once
+  built (Ready 15 ticks after completion), because the scripted player stops placing chain links while the Nullifier is
+  being built. At 36–40 cells, the Nullifier blueprint itself took 38–111 ticks instead of 30. At 40 its cell
+  hovered at the threshold (Desync 4.8 to 5.1), so construction waited for clean ground.
