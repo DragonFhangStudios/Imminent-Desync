@@ -199,6 +199,14 @@ or tuning change. The combined build is to be prepared for interactive playtesti
 development. The increment 2 pull request stays unmerged. Increment 4, Gate D and The Basin remain unauthorized.
 Integration details: `SYNC_INFRASTRUCTURE.md` §9.5.
 
+**2026-11-26, overnight assignment:** the Director assigned two work packages on the combined implementation (PR #6
+`9f4c976` and PR #7 `532ae92`, both draft and unmerged): (1) a local Windows x64 standalone development build of the
+combined playtest scene, built outside the repository and without permanently changing build settings or the Sandbox
+scene; (2) an automated full-loop validation from a Sync Core near the map rim (Observe → Establish → Defend →
+Advance → Neutralize), comparing a direct advance, a defense-first advance and an idle control, with no tuning change.
+No production tuning, new gameplay systems, increment 4 or The Basin. Results: `SYNC_INFRASTRUCTURE.md` §9.6;
+findings F8 and F9 are recorded there, not acted on.
+
 ## 7. Open Director decisions
 
 1. Recovery mathematics after reconfiguration (post-victory decay, Restoration strength, radius and duration, or a combination).
@@ -221,6 +229,9 @@ Integration details: `SYNC_INFRASTRUCTURE.md` §9.5.
 7. Scheduling of the comparative suppression playtest and of the replacement research study.
 8. ~~Gate B completion~~ — **passed 2026-11-25** (§6). Gate D authorization is still open.
 9. Map-boundary behavior and natural decay remain open design and test decisions. `decayRate` stays.
+10. Intended progression vs. Sync Core placement (findings F8 and F9, `SYNC_INFRASTRUCTURE.md` §9.6, 2026-11-26):
+    whether a mission must be winnable from a Sync Core near the map rim, and whether Sync Core placement should be
+    constrained. Recorded, not decided; nothing was changed.
 
 ## 8. Deferred features
 
